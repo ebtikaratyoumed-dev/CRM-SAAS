@@ -17,7 +17,8 @@ import {
   X,
   Shield,
   CircleDollarSign,
-  Package
+  Package,
+  Calculator
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,7 @@ const navItems = [
   { label: 'Finance', href: '/dashboard/finance', icon: CircleDollarSign },
   { label: 'Projets', href: '/dashboard/projects', icon: Briefcase },
   { label: 'Stock', href: '/dashboard/stock', icon: Package },
+  { label: 'Estimateur', href: '/dashboard/estimator', icon: Calculator, adminOnly: true },
   { label: 'Tâches', href: '/dashboard/tasks', icon: CheckSquare },
   { label: 'Factures reçues', href: '/dashboard/invoices', icon: FileSearch },
   { label: 'Utilisateurs', href: '/dashboard/users', icon: Shield },
@@ -56,6 +58,7 @@ export function Sidebar({ userRole = 'worker' }: { userRole?: string }) {
 
   const filteredNavItems = navItems.filter(item => {
     if (userRole !== 'admin' && !workerAllowedHrefs.includes(item.href)) return false
+    if ((item as any).adminOnly && userRole !== 'admin') return false
     return true
   })
 
