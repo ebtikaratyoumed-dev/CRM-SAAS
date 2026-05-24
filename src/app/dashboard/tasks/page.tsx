@@ -16,15 +16,18 @@ import { fr } from 'date-fns/locale';
 import { redirect } from 'next/navigation';
 import { TaskActions } from '@/components/dashboard/tasks/task-actions';
 import { TaskTabs } from '@/components/dashboard/tasks/task-tabs';
+import { TaskSearch } from '@/components/dashboard/tasks/task-search';
 import { TaskDetailsDialog } from '@/components/dashboard/tasks/task-details-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 export default async function TasksPage({
   searchParams
 }: {
-  searchParams: { tab?: string }
+  searchParams: Promise<{ tab?: string; search?: string }>
 }) {
-  const currentTab = (await searchParams).tab || 'list';
+  const params = await searchParams;
+  const currentTab = params.tab || 'list';
+  const searchQuery = params.search || '';
   const supabase = await createClient();
 
   const {
@@ -62,6 +65,9 @@ export default async function TasksPage({
   }
   // Admin: no extra filter — RLS policy scopes to company automatically
 
+  if (searchQuery) {
+    query = query.ilike('title', `%${searchQuery}%`);
+  }
 
   const { data: tasks } = await query;
 
@@ -100,14 +106,7 @@ export default async function TasksPage({
                 <TabsTrigger value="Terminé" className="data-[state=active]:bg-slate-800">Terminées</TabsTrigger>
             </TabsList>
 
-            <div className="relative flex-1 max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                <input 
-                    type="text" 
-                    placeholder="Chercher une tâche..." 
-                    className="w-full bg-slate-950 border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 border transition-all"
-                />
-            </div>
+            <TaskSearch />
         </div>
 
         <TabsContent value="tous" className="mt-0">
