@@ -39,14 +39,38 @@ ALTER TABLE profiles
   ALTER COLUMN admin_owner_id SET NOT NULL;
 
 -- ============================================================
--- Helper function
+-- Helper functions (SECURITY DEFINER to prevent RLS recursion)
 -- ============================================================
-CREATE OR REPLACE FUNCTION get_admin_owner_id()
+CREATE OR REPLACE FUNCTION get_my_admin_owner_id()
 RETURNS UUID
-LANGUAGE sql
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
 STABLE
 AS $$
-  SELECT admin_owner_id FROM profiles WHERE id = auth.uid()
+DECLARE
+  v_admin_owner_id UUID;
+BEGIN
+  SELECT admin_owner_id INTO v_admin_owner_id FROM profiles WHERE id = auth.uid();
+  RETURN v_admin_owner_id;
+END;
+$$;
+
+CREATE OR REPLACE FUNCTION is_my_role_admin()
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+STABLE
+AS $$
+DECLARE
+  v_is_admin BOOLEAN;
+BEGIN
+  SELECT EXISTS (
+    SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin'
+  ) INTO v_is_admin;
+  RETURN v_is_admin;
+END;
 $$;
 
 -- ============================================================
@@ -216,7 +240,7 @@ DROP POLICY IF EXISTS "Admins manage company profiles"           ON profiles;
 CREATE POLICY "Users view company profiles" ON profiles
   FOR SELECT
   USING (
-    admin_owner_id = (SELECT admin_owner_id FROM profiles WHERE id = auth.uid())
+    admin_owner_id = get_my_admin_owner_id()
   );
 
 CREATE POLICY "Admins manage company profiles" ON profiles
@@ -224,8 +248,8 @@ CREATE POLICY "Admins manage company profiles" ON profiles
   USING (
     auth.jwt() ->> 'role' = 'service_role'
     OR (
-      EXISTS (SELECT 1 FROM profiles WHERE id = auth.uid() AND role = 'admin')
-      AND admin_owner_id = (SELECT admin_owner_id FROM profiles WHERE id = auth.uid())
+      is_my_role_admin()
+      AND admin_owner_id = get_my_admin_owner_id()
     )
   );
 
