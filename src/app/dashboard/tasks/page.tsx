@@ -59,9 +59,9 @@ export default async function TasksPage({
 
   if (!isAdmin) {
     query = query.eq('assigned_to', user.id);
-  } else {
-    query = query.eq('created_by', user.id);
   }
+  // Admin: no extra filter — RLS policy scopes to company automatically
+
 
   const { data: tasks } = await query;
 

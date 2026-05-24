@@ -51,11 +51,22 @@ export default async function UsersPage({
     redirect('/dashboard');
   }
 
+  // Fetch current admin's own profile to get their company scope
+  const { data: adminProfile } = await supabase
+    .from('profiles')
+    .select('admin_owner_id')
+    .eq('id', user.id)
+    .single();
+
+  const adminOwnerId = adminProfile?.admin_owner_id ?? user.id;
+
+  // Fetch all members in the same company (same admin_owner_id)
   const { data: members, error } = await supabase
     .from('profiles')
     .select('*')
-    .or(`created_by.eq.${user.id},id.eq.${user.id}`)
+    .eq('admin_owner_id', adminOwnerId)
     .order('created_at', { ascending: false });
+
 
   const getRoleBadge = (role: string) => {
     switch (role) {

@@ -25,19 +25,24 @@ export async function createUser(formData: {
     throw new Error('Non authentifié');
   }
 
-  const { data: profile } = await supabase
+  // Fetch creator's full profile including admin_owner_id
+  const { data: creatorProfile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, admin_owner_id')
     .eq('id', currentUser.id)
     .single();
 
-  if (profile?.role !== 'admin') {
+  if (creatorProfile?.role !== 'admin') {
     throw new Error('Seuls les administrateurs peuvent ajouter des utilisateurs');
   }
 
   if (!serviceRoleKey || !supabaseUrl) {
     throw new Error('Configuration manquante: SUPABASE_SERVICE_ROLE_KEY non définie. Veuillez l\'ajouter à votre fichier .env');
   }
+
+  // The new user inherits the company scope from the creator.
+  // If the creator is a root admin, their admin_owner_id = their own id.
+  const adminOwnerId = creatorProfile.admin_owner_id ?? currentUser.id;
 
   // 2. Create the user with the service role key (admin bypass)
   const adminSupabase = createAdminClient(supabaseUrl, serviceRoleKey, {
@@ -54,6 +59,7 @@ export async function createUser(formData: {
       full_name: formData.full_name,
       role: formData.role,
       created_by: currentUser.id,
+      admin_owner_id: adminOwnerId,
     },
     email_confirm: true,
   });
@@ -63,7 +69,26 @@ export async function createUser(formData: {
     throw new Error(authError.message);
   }
 
-  // Note: The profile will be created by the on_auth_user_created trigger
+  if (!newUser?.user) {
+    throw new Error('Erreur lors de la création du compte');
+  }
+
+  // Upsert the profile with created_by AND admin_owner_id.
+  // This ensures the new user can see all company data on first login.
+  const { error: profileError } = await adminSupabase
+    .from('profiles')
+    .upsert({
+      id: newUser.user.id,
+      full_name: formData.full_name,
+      role: formData.role,
+      created_by: currentUser.id,
+      admin_owner_id: adminOwnerId,
+    }, { onConflict: 'id' });
+
+  if (profileError) {
+    console.error('Erreur mise à jour profil:', profileError);
+    // Non-fatal: log it but don't block user creation
+  }
 
   revalidatePath('/dashboard/users');
   return { success: true };
@@ -78,13 +103,13 @@ export async function deleteUser(id: string) {
 
   if (!currentUser) throw new Error('Non authentifié');
 
-  const { data: profile } = await supabase
+  const { data: adminProfile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, admin_owner_id')
     .eq('id', currentUser.id)
     .single();
 
-  if (profile?.role !== 'admin') {
+  if (adminProfile?.role !== 'admin') {
     throw new Error('Seuls les administrateurs peuvent supprimer des utilisateurs');
   }
 
@@ -92,10 +117,10 @@ export async function deleteUser(id: string) {
     throw new Error('Vous ne pouvez pas supprimer votre propre compte');
   }
 
-  // Fetch target user to check creator
+  // Fetch target user's company scope
   const { data: targetProfile, error: fetchError } = await supabase
     .from('profiles')
-    .select('created_by')
+    .select('admin_owner_id, created_by')
     .eq('id', id)
     .single();
 
@@ -103,18 +128,43 @@ export async function deleteUser(id: string) {
     throw new Error('Utilisateur non trouvé');
   }
 
-  if (targetProfile.created_by !== currentUser.id) {
-    throw new Error("Vous n'avez pas la permission de supprimer cet utilisateur");
-  }
-
   if (!serviceRoleKey || !supabaseUrl) {
     throw new Error('Configuration manquante: SUPABASE_SERVICE_ROLE_KEY non définie');
   }
 
-  const adminSupabase = createAdminClient(supabaseUrl, serviceRoleKey);
+  const adminSupabase = createAdminClient(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+
+  // Check that the target user belongs to the same company.
+  // Any admin can manage any user in their company.
+  const currentAdminOwnerId = adminProfile.admin_owner_id ?? currentUser.id;
+  const targetAdminOwnerId = targetProfile.admin_owner_id;
+
+  let isSameCompany = targetAdminOwnerId === currentAdminOwnerId;
+
+  // Fallback for users without admin_owner_id: check auth metadata
+  if (!isSameCompany && targetAdminOwnerId === null) {
+    const { data: authUserData } = await adminSupabase.auth.admin.getUserById(id);
+    const metaAdminOwnerId = authUserData?.user?.user_metadata?.admin_owner_id;
+    const metaCreatedBy = authUserData?.user?.user_metadata?.created_by;
+    isSameCompany = metaAdminOwnerId === currentAdminOwnerId
+      || metaCreatedBy === currentUser.id;
+  }
+
+  if (!isSameCompany) {
+    throw new Error("Vous n'avez pas la permission de supprimer cet utilisateur");
+  }
+
+
+  // Delete the user from Supabase Auth (this also cascades to profiles via DB foreign key)
   const { error } = await adminSupabase.auth.admin.deleteUser(id);
 
   if (error) {
+    console.error('Erreur suppression utilisateur Auth:', error);
     throw new Error(error.message);
   }
 
@@ -136,20 +186,20 @@ export async function updateUser(id: string, formData: {
 
   if (!currentUser) throw new Error('Non authentifié');
 
-  const { data: profile } = await supabase
+  const { data: adminProfile } = await supabase
     .from('profiles')
-    .select('role')
+    .select('role, admin_owner_id')
     .eq('id', currentUser.id)
     .single();
 
-  if (profile?.role !== 'admin') {
+  if (adminProfile?.role !== 'admin') {
     throw new Error('Seuls les administrateurs peuvent modifier des utilisateurs');
   }
 
-  // Verify target user ownership (can only modify users they created or themselves)
+  // Verify target user is in the same company
   const { data: targetProfile, error: fetchError } = await supabase
     .from('profiles')
-    .select('created_by')
+    .select('admin_owner_id')
     .eq('id', id)
     .single();
 
@@ -157,9 +207,13 @@ export async function updateUser(id: string, formData: {
     throw new Error('Utilisateur non trouvé');
   }
 
-  if (targetProfile.created_by !== currentUser.id && id !== currentUser.id) {
+  const currentAdminOwnerId = adminProfile.admin_owner_id ?? currentUser.id;
+  const isSameCompany = targetProfile.admin_owner_id === currentAdminOwnerId || id === currentUser.id;
+
+  if (!isSameCompany) {
     throw new Error("Vous n'avez pas la permission de modifier cet utilisateur");
   }
+
 
   if (!serviceRoleKey || !supabaseUrl) {
     throw new Error('Configuration manquante: SUPABASE_SERVICE_ROLE_KEY non définie.');
