@@ -28,8 +28,15 @@ export function LoginForm() {
       })
 
       if (error) {
-        toast.error("Erreur d'inscription", {
-          description: error.message,
+        let errorMsg = error.message
+        if (error.message === 'Invalid login credentials') {
+          errorMsg = 'L\'adresse email ou le mot de passe est incorrect.'
+        } else if (error.message === 'Email not confirmed') {
+          errorMsg = 'Veuillez confirmer votre adresse email.'
+        }
+
+        toast.error("Erreur de connexion", {
+          description: errorMsg,
         })
         return
       }
