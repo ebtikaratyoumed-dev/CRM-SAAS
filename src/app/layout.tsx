@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -24,6 +25,7 @@ export default function RootLayout({
     <html lang="fr" className={cn("h-full", "antialiased", "dark", inter.variable, "font-sans", geist.variable)} suppressHydrationWarning>
       <body className="font-sans min-h-full bg-background text-foreground" suppressHydrationWarning>
         {children}
+        <Toaster theme="dark" closeButton richColors />
       </body>
     </html>
   );

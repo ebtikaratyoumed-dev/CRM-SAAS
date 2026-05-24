@@ -1,5 +1,4 @@
 import { Sidebar } from '@/components/sidebar/sidebar'
-import { Toaster } from '@/components/ui/sonner'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function DashboardLayout({
@@ -40,7 +39,6 @@ export default async function DashboardLayout({
           {children}
         </div>
       </main>
-      <Toaster theme="dark" closeButton richColors />
     </div>
   )
 }
