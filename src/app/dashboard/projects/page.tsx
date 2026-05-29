@@ -1,4 +1,6 @@
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useSearchParams, redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, Search, MapPin, Calendar, User } from 'lucide-react';
 import { ProjectForm } from '@/components/dashboard/projects/project-form';
@@ -6,41 +8,29 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { Badge } from '@/components/ui/badge';
 import Link from 'next/link';
-import { redirect } from 'next/navigation';
 import { ProjectActions } from '@/components/dashboard/projects/project-actions';
 import { ProjectTabs } from '@/components/dashboard/projects/project-tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
-import { getAuthUser } from '@/lib/auth';
+export default function ProjectsPage() {
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'list';
+  const { projects, profile, loading } = useDashboardCache();
 
-interface ProjectsPageProps {
-  searchParams: Promise<{ tab?: string }>;
-}
-
-export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
-  const params = await searchParams;
-  const currentTab = params.tab || 'list';
-  const supabase = await createClient();
-
-  const { user, profile } = await getAuthUser();
-
-  if (!user) {
-    redirect('/auth/login');
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-slate-400">
+        <LayoutGrid className="h-8 w-8 animate-bounce mx-auto mb-4 text-blue-500" />
+        <p className="font-medium">Chargement des projets...</p>
+      </div>
+    );
   }
 
   const isAdmin = profile?.role === 'admin';
 
   if (!isAdmin) {
     redirect('/dashboard');
-  }
-
-  const { data: projects, error: projectsError } = await supabase
-    .from('projects')
-    .select('id, name, status, client_name, location, start_date, deadline, created_at')
-    .order('created_at', { ascending: false });
-
-  if (projectsError) {
-    console.error('Error fetching projects:', projectsError);
   }
 
   const projectList = (projects || []).map((p: any) => ({
@@ -53,7 +43,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       case 'Planification': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       case 'En cours': return 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20';
       case 'En pause': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-      case 'Terminé': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+      case 'Termine': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
       default: return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
     }
   };
@@ -66,7 +56,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             Gestion des Projets
           </h1>
           <p className="text-slate-400 mt-1">
-            Gérez et suivez l'avancement de vos chantiers en temps réel.
+            Gerez et suivez l'avancement de vos chantiers en temps reel.
           </p>
         </div>
       </div>
@@ -127,7 +117,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
                     </div>
                   </div>
                   <Button variant="ghost" className="text-blue-400 hover:text-blue-300 hover:bg-blue-400/10 h-8 px-3" nativeButton={false} render={<Link href={`/dashboard/projects/${project.id}`} />}>
-                    Détails
+                    Details
                   </Button>
                 </div>
               </div>
@@ -137,7 +127,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               <div className="col-span-full text-center py-12 bg-slate-900/20 border border-slate-800 border-dashed rounded-2xl">
                 <LayoutGrid className="mx-auto h-12 w-12 text-slate-600 mb-4" />
                 <h3 className="text-lg font-semibold text-slate-300">Aucun projet</h3>
-                <p className="text-slate-500 mt-1">Vous n'avez pas encore créé de projet.</p>
+                <p className="text-slate-500 mt-1">Vous n'avez pas encore cree de projet.</p>
               </div>
             )}
           </div>
@@ -145,8 +135,8 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       ) : (
         <Card className="max-w-2xl mx-auto bg-slate-900/50 border-slate-800">
           <CardHeader>
-            <CardTitle>Création de Projet</CardTitle>
-            <CardDescription>Remplissez les détails du nouveau chantier pour commencer le suivi.</CardDescription>
+            <CardTitle>Creation de Projet</CardTitle>
+            <CardDescription>Remplissez les details du nouveau chantier pour commencer le suivi.</CardDescription>
           </CardHeader>
           <CardContent>
             <ProjectForm />

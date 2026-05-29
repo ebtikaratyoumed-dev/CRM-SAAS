@@ -31,6 +31,7 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { fr } from 'date-fns/locale';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
 const taskSchema = z.object({
   title: z.string().min(2, "Le titre est trop court"),
@@ -53,6 +54,7 @@ interface TaskFormProps {
 export function TaskForm({ projects, members, onSuccess, redirectUrl }: TaskFormProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refreshData } = useDashboardCache();
 
   const form = useForm<TaskFormValues>({
     resolver: zodResolver(taskSchema) as any,
@@ -73,6 +75,7 @@ export function TaskForm({ projects, members, onSuccess, redirectUrl }: TaskForm
 
       await createTask(payload as any);
       toast.success('Tâche créée avec succès');
+      await refreshData();
       if (onSuccess) onSuccess();
       if (redirectUrl) router.push(redirectUrl);
     } catch (error: any) {

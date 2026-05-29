@@ -1,40 +1,23 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+'use client';
+
 import { Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { AddStockDialog } from '@/components/stock/add-stock-dialog';
 import { StockRowActions } from '@/components/stock/stock-row-actions';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
-import { getAuthUser } from '@/lib/auth';
+export default function StockPage() {
+  const { stockItems, projects, incomingInvoices, loading } = useDashboardCache();
 
-export default async function StockPage() {
-  const supabase = await createClient();
-  const { user } = await getAuthUser();
-
-  if (!user) {
-    redirect('/auth/login');
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-slate-400">
+        <Package className="h-8 w-8 animate-bounce mx-auto mb-4 text-orange-500" />
+        <p className="font-medium">Chargement du stock...</p>
+      </div>
+    );
   }
-
-  // Fetch all stock page dependencies in parallel selecting specific columns
-  const [stockRes, projectsRes, invoicesRes] = await Promise.all([
-    supabase
-      .from('stock_items')
-      .select('id, name, description, quantity, unit, created_at, project_id, invoice_id, project:projects(id, name), invoice:invoices(invoice_number, vendor_name)')
-      .order('created_at', { ascending: false }),
-    supabase
-      .from('projects')
-      .select('id, name')
-      .order('name'),
-    supabase
-      .from('invoices')
-      .select('id, invoice_number, vendor_name, project_id')
-      .order('created_at', { ascending: false })
-  ]);
-
-  const stockItems = stockRes.data;
-  const projects = projectsRes.data;
-  const incomingInvoices = invoicesRes.data;
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
@@ -45,7 +28,7 @@ export default async function StockPage() {
             Stock Global
           </h1>
           <p className="text-slate-400 mt-1">
-            Gérez l'inventaire à travers tous vos projets
+            Gerez l'inventaire a travers tous vos projets
           </p>
         </div>
         <AddStockDialog 
@@ -59,7 +42,7 @@ export default async function StockPage() {
           <div className="py-16 text-center">
             <Package className="h-16 w-16 text-slate-700 mx-auto mb-4" />
             <p className="text-slate-400 text-lg font-medium">Aucun article en stock</p>
-            <p className="text-slate-500 mt-1">Ajoutez des articles pour commencer à suivre votre inventaire.</p>
+            <p className="text-slate-500 mt-1">Ajoutez des articles pour commencer a suivre votre inventaire.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -68,8 +51,8 @@ export default async function StockPage() {
                 <tr>
                   <th className="px-6 py-4 font-semibold">Article</th>
                   <th className="px-6 py-4 font-semibold">Projet</th>
-                  <th className="px-6 py-4 font-semibold text-right">Quantité</th>
-                  <th className="px-6 py-4 font-semibold">Facture liée</th>
+                  <th className="px-6 py-4 font-semibold text-right">Quantite</th>
+                  <th className="px-6 py-4 font-semibold">Facture liee</th>
                   <th className="px-6 py-4 font-semibold text-right">Date d&apos;ajout</th>
                   <th className="px-6 py-4 font-semibold text-right">Actions</th>
                 </tr>
@@ -97,7 +80,7 @@ export default async function StockPage() {
                           <span className="text-slate-500">{item.invoice.vendor_name}</span>
                         </div>
                       ) : (
-                        <span className="text-slate-600 italic">Non liée</span>
+                        <span className="text-slate-600 italic">Non liee</span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right text-slate-500 text-xs">

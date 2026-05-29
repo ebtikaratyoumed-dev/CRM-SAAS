@@ -44,6 +44,7 @@ const projectSchema = z.object({
 type ProjectFormValues = z.infer<typeof projectSchema>;
 
 import { usePathname, useRouter } from 'next/navigation';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
 interface ProjectFormProps {
   initialData?: any;
@@ -53,6 +54,7 @@ interface ProjectFormProps {
 export function ProjectForm({ initialData, onSuccess }: ProjectFormProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const { refreshData } = useDashboardCache();
 
   const form = useForm<ProjectFormValues>({
     resolver: zodResolver(projectSchema) as any,
@@ -88,6 +90,7 @@ export function ProjectForm({ initialData, onSuccess }: ProjectFormProps) {
         await createProject(payload);
         toast.success('Projet créé avec succès');
       }
+      await refreshData();
       if (onSuccess) {
         onSuccess();
       } else {

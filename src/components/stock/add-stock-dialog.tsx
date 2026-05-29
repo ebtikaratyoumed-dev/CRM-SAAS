@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { addStockItem } from '@/app/dashboard/stock/actions';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useDashboardCache } from '@/context/dashboard-cache';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -29,6 +30,7 @@ export function AddStockDialog({ projectId, incomingInvoices = [], projects = []
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refreshData } = useDashboardCache();
 
   const [formData, setFormData] = useState({
     project_id: projectId || '',
@@ -62,6 +64,7 @@ export function AddStockDialog({ projectId, incomingInvoices = [], projects = []
       toast.success("Article ajouté au stock avec succès");
       setOpen(false);
       setFormData({ project_id: projectId || '', name: '', description: '', quantity: '', unit: '', invoice_id: 'none', alert_threshold: '' });
+      await refreshData();
       router.refresh();
     } catch (error: any) {
       console.error('Failed to add stock item:', error);

@@ -78,7 +78,7 @@ export async function addStockItem(formData: {
     throw new Error(`Impossible d'ajouter au stock: ${error.message} (${error.code})`);
   }
 
-  revalidatePath('/dashboard/projects/[id]', 'page');
+  revalidatePath(`/dashboard/projects/${formData.project_id}`);
   revalidatePath('/dashboard/stock');
   
   return { success: true, data };
@@ -104,7 +104,10 @@ export async function updateStockItemQuantity(id: string, quantity: number) {
     throw new Error("Impossible de mettre à jour la quantité");
   }
 
-  revalidatePath('/dashboard/projects/[id]', 'page');
+  const projectId = data?.[0]?.project_id;
+  if (projectId) {
+    revalidatePath(`/dashboard/projects/${projectId}`);
+  }
   revalidatePath('/dashboard/stock');
   
   return { success: true, data };
@@ -119,17 +122,21 @@ export async function deleteStockItem(id: string) {
     throw new Error('Non authentifié');
   }
 
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from('stock_items')
     .delete()
-    .eq('id', id);
+    .eq('id', id)
+    .select('project_id');
 
   if (error) {
     console.error("Erreur lors de la suppression de l'élément du stock:", error);
     throw new Error("Impossible de supprimer l'élément du stock");
   }
 
-  revalidatePath('/dashboard/projects/[id]', 'page');
+  const projectId = data?.[0]?.project_id;
+  if (projectId) {
+    revalidatePath(`/dashboard/projects/${projectId}`);
+  }
   revalidatePath('/dashboard/stock');
   
   return { success: true };
@@ -169,7 +176,7 @@ export async function updateStockItem(
     throw new Error(`Impossible de mettre à jour le stock: ${error.message} (${error.code})`);
   }
 
-  revalidatePath('/dashboard/projects/[id]', 'page');
+  revalidatePath(`/dashboard/projects/${formData.project_id}`);
   revalidatePath('/dashboard/stock');
   
   return { success: true, data };

@@ -1,12 +1,12 @@
-import { createClient } from '@/lib/supabase/server';
-import { redirect } from 'next/navigation';
+'use client';
+
 import { 
   Plus, 
   ArrowUpRight, 
   ArrowDownLeft, 
   ExternalLink,
-  MoreVertical,
-  Download
+  Download,
+  Clock
 } from 'lucide-react';
 import { OutgoingInvoiceActions } from '@/components/dashboard/invoices/outgoing-invoice-actions';
 import { IncomingInvoiceActions } from '@/components/dashboard/invoices/incoming-invoice-actions';
@@ -24,55 +24,23 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Link from 'next/link';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
-import { getAuthUser } from '@/lib/auth';
-
-export default async function InvoicesPage() {
-  const supabase = await createClient();
-  const { user } = await getAuthUser();
-
-  if (!user) {
-    redirect('/auth/login');
-  }
-
-  // Fetch incoming and outgoing invoices in parallel, selecting only required fields
-  const [incomingRes, outgoingRes] = await Promise.all([
-    supabase
-      .from('invoices')
-      .select(`
-        id,
-        invoice_number,
-        vendor_name,
-        project_id,
-        invoice_date,
-        total_amount,
-        status,
-        file_url,
-        project:projects(name),
-        stock_items(id)
-      `)
-      .order('invoice_date', { ascending: false }),
-    supabase
-      .from('invoices_outgoing')
-      .select(`
-        id,
-        invoice_number,
-        client_name,
-        project_id,
-        created_at,
-        total,
-        status,
-        project:projects(name)
-      `)
-      .order('created_at', { ascending: false })
-  ]);
-
-  const incomingInvoices = incomingRes.data;
-  const outgoingInvoices = outgoingRes.data;
+export default function InvoicesPage() {
+  const { incomingInvoices, outgoingInvoices, loading } = useDashboardCache();
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND' }).format(amount);
   };
+
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-slate-400">
+        <Clock className="h-8 w-8 animate-bounce mx-auto mb-4 text-emerald-500" />
+        <p className="font-medium">Chargement des factures...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
@@ -115,7 +83,7 @@ export default async function InvoicesPage() {
             <Table>
               <TableHeader className="bg-slate-950/50">
                 <TableRow className="border-slate-800">
-                  <TableHead>Numéro</TableHead>
+                  <TableHead>Numero</TableHead>
                   <TableHead>Fournisseur</TableHead>
                   <TableHead>Projet</TableHead>
                   <TableHead>Date</TableHead>
@@ -129,7 +97,7 @@ export default async function InvoicesPage() {
                 {incomingInvoices?.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12 text-slate-500">
-                      Aucune facture fournisseur trouvée. Commencez par en saisir une.
+                      Aucune facture fournisseur trouvee. Commencez par en saisir une.
                     </TableCell>
                   </TableRow>
                 )}
@@ -137,7 +105,7 @@ export default async function InvoicesPage() {
                   <TableRow key={invoice.id} className="border-slate-800 hover:bg-slate-900/40 transition-colors">
                     <TableCell className="font-medium text-slate-200">{invoice.invoice_number}</TableCell>
                     <TableCell className="text-slate-300 font-semibold">{invoice.vendor_name}</TableCell>
-                    <TableCell className="text-slate-400 text-xs">{(invoice.project as any)?.name || 'Non assigné'}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">{(invoice.project as any)?.name || 'Non assigne'}</TableCell>
                     <TableCell className="text-slate-400">
                       {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd MMM yyyy', { locale: fr }) : '-'}
                     </TableCell>
@@ -165,7 +133,7 @@ export default async function InvoicesPage() {
                             <ExternalLink className="h-4 w-4" />
                           </Button>
                         ) : null}
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-400" title="Télécharger PDF" nativeButton={false} render={<a href={`/api/invoice-incoming-pdf/${invoice.id}`} download />}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-400" title="Telecharger PDF" nativeButton={false} render={<a href={`/api/invoice-incoming-pdf/${invoice.id}`} download />}>
                           <Download className="h-4 w-4" />
                         </Button>
                         <IncomingInvoiceActions invoiceId={invoice.id} />
@@ -183,10 +151,10 @@ export default async function InvoicesPage() {
             <Table>
               <TableHeader className="bg-slate-950/50">
                 <TableRow className="border-slate-800">
-                  <TableHead>Numéro</TableHead>
+                  <TableHead>Numero</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Projet</TableHead>
-                  <TableHead>Date Création</TableHead>
+                  <TableHead>Date Creation</TableHead>
                   <TableHead className="text-right">Total TTC</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="w-[100px]"></TableHead>
@@ -196,7 +164,7 @@ export default async function InvoicesPage() {
                 {outgoingInvoices?.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={7} className="text-center py-12 text-slate-500">
-                      Aucune facture client trouvée.
+                      Aucune facture client trouvee.
                     </TableCell>
                   </TableRow>
                 )}
@@ -218,7 +186,7 @@ export default async function InvoicesPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex justify-end gap-2">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-400" title="Télécharger PDF" nativeButton={false} render={<a href={`/api/invoice-pdf/${invoice.id}`} download />}>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400 hover:text-emerald-400" title="Telecharger PDF" nativeButton={false} render={<a href={`/api/invoice-pdf/${invoice.id}`} download />}>
                           <Download className="h-4 w-4" />
                         </Button>
                         <OutgoingInvoiceActions invoice={{ id: invoice.id, invoice_number: invoice.invoice_number, status: invoice.status }} />

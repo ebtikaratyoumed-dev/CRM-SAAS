@@ -1,13 +1,8 @@
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useSearchParams, redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Plus, UserPlus, Mail, Shield, Calendar, MoreVertical, Trash2, Edit2 } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+import { Shield, Clock } from 'lucide-react';
 import {
   Table,
   TableBody,
@@ -17,61 +12,38 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from '@/components/ui/badge';
-import { redirect } from 'next/navigation';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { UserForm } from '@/components/dashboard/users/user-form';
 import { UserTabs } from '@/components/dashboard/users/user-tabs';
 import { UserActions } from '@/components/dashboard/users/user-actions';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
-export default async function UsersPage({
-  searchParams
-}: {
-  searchParams: { tab?: string }
-}) {
-  const currentTab = (await searchParams).tab || 'list';
-  const supabase = await createClient();
+export default function UsersPage() {
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab') || 'list';
+  const { users: members, user, profile, loading } = useDashboardCache();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect('/auth/login');
+  if (loading) {
+    return (
+      <div className="p-8 text-center text-slate-400">
+        <Clock className="h-8 w-8 animate-bounce mx-auto mb-4 text-purple-500" />
+        <p className="font-medium">Chargement des utilisateurs...</p>
+      </div>
+    );
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
+  const isAdmin = profile?.role === 'admin';
 
-  if (profile?.role !== 'admin') {
+  if (!isAdmin) {
     redirect('/dashboard');
   }
-
-  // Fetch current admin's own profile to get their company scope
-  const { data: adminProfile } = await supabase
-    .from('profiles')
-    .select('admin_owner_id')
-    .eq('id', user.id)
-    .single();
-
-  const adminOwnerId = adminProfile?.admin_owner_id ?? user.id;
-
-  // Fetch all members in the same company (same admin_owner_id)
-  const { data: members, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('admin_owner_id', adminOwnerId)
-    .order('created_at', { ascending: false });
-
 
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'admin': return <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/20">Administrateur</Badge>;
-      case 'engineer': return <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">Ingénieur / Archi</Badge>;
+      case 'engineer': return <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/20">Ingenieur / Archi</Badge>;
       case 'worker': return <Badge className="bg-slate-500/10 text-slate-400 border-slate-500/20">Ouvrier</Badge>;
       default: return <Badge>{role}</Badge>;
     }
@@ -85,7 +57,7 @@ export default async function UsersPage({
             Gestion des Utilisateurs
           </h1>
           <p className="text-slate-400 mt-1">
-            Gérez les comptes ouvriers et administrateurs de votre entreprise.
+            Gerez les comptes ouvriers et administrateurs de votre entreprise.
           </p>
         </div>
       </div>
@@ -99,8 +71,8 @@ export default async function UsersPage({
               <TableHeader className="bg-slate-900/60">
                 <TableRow className="border-slate-800 hover:bg-transparent">
                   <TableHead className="text-slate-400">Nom Complet</TableHead>
-                  <TableHead className="text-slate-400">Rôle</TableHead>
-                  <TableHead className="text-slate-400">Arrivé le</TableHead>
+                  <TableHead className="text-slate-400">Role</TableHead>
+                  <TableHead className="text-slate-400">Arrive le</TableHead>
                   <TableHead className="text-right text-slate-400">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -123,7 +95,7 @@ export default async function UsersPage({
                        {format(new Date(member.created_at), 'dd MMM yyyy', { locale: fr })}
                     </TableCell>
                     <TableCell className="text-right">
-                      <UserActions user={member} currentUserId={user.id} />
+                       <UserActions user={member} currentUserId={user?.id} />
                     </TableCell>
                   </TableRow>
                 ))}
@@ -146,7 +118,7 @@ export default async function UsersPage({
                   <Shield className="h-6 w-6 text-purple-500" />
                </div>
                <div>
-                  <p className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Ingénieurs</p>
+                  <p className="text-sm text-slate-400 uppercase tracking-wider font-semibold">Ingenieurs</p>
                   <p className="text-2xl font-bold">{members?.filter(m => m.role === 'engineer').length}</p>
                </div>
             </div>
@@ -164,8 +136,8 @@ export default async function UsersPage({
       ) : (
         <Card className="max-w-xl mx-auto bg-slate-900/50 border-slate-800">
           <CardHeader>
-            <CardTitle>Créer un nouvel utilisateur</CardTitle>
-            <CardDescription>Configurez un compte pour un nouvel employé ou administrateur.</CardDescription>
+            <CardTitle>Creer un nouvel utilisateur</CardTitle>
+            <CardDescription>Configurez un compte pour un nouvel employe ou administrateur.</CardDescription>
           </CardHeader>
           <CardContent>
             <UserForm redirectUrl="/dashboard/users?tab=list" />

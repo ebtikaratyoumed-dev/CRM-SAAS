@@ -47,10 +47,12 @@ interface UserFormProps {
 
 import { useRouter } from 'next/navigation';
 import { updateUser } from '@/app/dashboard/users/actions';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
 export function UserForm({ redirectUrl, initialData, onSuccess }: UserFormProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refreshData } = useDashboardCache();
 
   const form = useForm<UserFormValues>({
     resolver: zodResolver(userSchema),
@@ -79,6 +81,7 @@ export function UserForm({ redirectUrl, initialData, onSuccess }: UserFormProps)
         const response = await updateUser(initialData.id, values);
         if (response.success) {
           toast.success(`Utilisateur ${values.full_name} mis à jour avec succès.`);
+          await refreshData();
           if (onSuccess) {
             onSuccess();
           } else if (redirectUrl) {
@@ -90,6 +93,7 @@ export function UserForm({ redirectUrl, initialData, onSuccess }: UserFormProps)
         const response = await createUser(values);
         if (response.success) {
           toast.success(`Utilisateur ${values.full_name} créé avec succès.`);
+          await refreshData();
           if (redirectUrl) {
             router.push(redirectUrl);
             router.refresh();

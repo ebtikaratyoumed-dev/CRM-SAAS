@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { updateStockItem, deleteStockItem } from '@/app/dashboard/stock/actions';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { useDashboardCache } from '@/context/dashboard-cache';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -40,6 +41,7 @@ export function StockRowActions({ item, projectId, incomingInvoices = [], projec
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refreshData } = useDashboardCache();
 
   const [formData, setFormData] = useState({
     project_id: item.project_id,
@@ -72,6 +74,7 @@ export function StockRowActions({ item, projectId, incomingInvoices = [], projec
 
       toast.success("Article mis à jour avec succès");
       setEditOpen(false);
+      await refreshData();
       router.refresh();
     } catch (error: any) {
       console.error('Failed to update stock item:', error);
@@ -87,6 +90,7 @@ export function StockRowActions({ item, projectId, incomingInvoices = [], projec
       await deleteStockItem(item.id);
       toast.success("Article supprimé du stock avec succès");
       setDeleteOpen(false);
+      await refreshData();
       router.refresh();
     } catch (error: any) {
       console.error('Failed to delete stock item:', error);
