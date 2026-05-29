@@ -36,6 +36,10 @@ yarn-error.log*
 # agent skills folder
 .agent/
 
+# scratch utility scripts
+/scratch/
+fix-rls.ts
+
 # vercel
 .vercel
 

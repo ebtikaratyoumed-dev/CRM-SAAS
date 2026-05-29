@@ -9,6 +9,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ProjectActions } from '@/components/dashboard/projects/project-actions';
 import { ProjectTabs } from '@/components/dashboard/projects/project-tabs';
+import { ProjectsDiagnostic } from '@/components/dashboard/projects/projects-diagnostic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { getAuthUser } from '@/lib/auth';
@@ -131,9 +132,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             ))}
 
             {projectList.length === 0 && (
-              <div className="col-span-full py-20 text-center bg-slate-900/20 border border-dashed border-slate-800 rounded-3xl">
-                <p className="text-slate-500">Aucun projet trouvé.</p>
-              </div>
+              <ProjectsDiagnostic />
             )}
           </div>
         </div>
