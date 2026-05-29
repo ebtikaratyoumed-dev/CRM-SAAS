@@ -60,7 +60,7 @@ export function ProjectForm({ initialData, onSuccess }: ProjectFormProps) {
       ? {
           ...initialData,
           start_date: new Date(initialData.start_date),
-          end_date: new Date(initialData.end_date),
+          end_date: new Date(initialData.deadline || initialData.end_date),
         }
       : {
           name: '',

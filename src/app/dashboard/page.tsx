@@ -55,7 +55,7 @@ export default async function DashboardPage({
       .select('id', { count: 'exact', head: true }),
     supabase
       .from('projects')
-      .select('id, name, location, end_date, status, created_at')
+      .select('id, name, location, deadline, status, created_at')
       .order('created_at', { ascending: false })
       .limit(3),
     supabase
@@ -71,7 +71,10 @@ export default async function DashboardPage({
   const tasksCount = tasksCountRes.count
   const invoicesCount = invoicesCountRes.count
   const membersCount = membersCountRes.count
-  const recentProjects = recentProjectsRes.data
+  const recentProjects = (recentProjectsRes.data || []).map((p: any) => ({
+    ...p,
+    end_date: p.deadline
+  }))
   const recentTasks = recentTasksRes.data as any[] | null
 
   return (

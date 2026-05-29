@@ -9,7 +9,6 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { ProjectActions } from '@/components/dashboard/projects/project-actions';
 import { ProjectTabs } from '@/components/dashboard/projects/project-tabs';
-import { ProjectsDiagnostic } from '@/components/dashboard/projects/projects-diagnostic';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 import { getAuthUser } from '@/lib/auth';
@@ -37,14 +36,17 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   const { data: projects, error: projectsError } = await supabase
     .from('projects')
-    .select('id, name, status, client_name, location, start_date, end_date, created_at')
+    .select('id, name, status, client_name, location, start_date, deadline, created_at')
     .order('created_at', { ascending: false });
 
   if (projectsError) {
     console.error('Error fetching projects:', projectsError);
   }
 
-  const projectList = projects || [];
+  const projectList = (projects || []).map((p: any) => ({
+    ...p,
+    end_date: p.deadline
+  }));
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -132,7 +134,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
             ))}
 
             {projectList.length === 0 && (
-              <ProjectsDiagnostic />
+              <div className="col-span-full text-center py-12 bg-slate-900/20 border border-slate-800 border-dashed rounded-2xl">
+                <LayoutGrid className="mx-auto h-12 w-12 text-slate-600 mb-4" />
+                <h3 className="text-lg font-semibold text-slate-300">Aucun projet</h3>
+                <p className="text-slate-500 mt-1">Vous n'avez pas encore créé de projet.</p>
+              </div>
             )}
           </div>
         </div>

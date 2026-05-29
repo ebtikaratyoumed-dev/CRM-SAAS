@@ -33,8 +33,10 @@ export async function createProject(formData: {
     throw new Error('Seuls les administrateurs peuvent créer des projets');
   }
 
+  const { end_date, ...rest } = formData;
   const { error } = await supabase.from('projects').insert({
-    ...formData,
+    ...rest,
+    deadline: end_date,
     created_by: user.id,
   });
 
@@ -70,9 +72,13 @@ export async function updateProject(
     throw new Error('Non authentifié');
   }
 
+  const { end_date, ...rest } = formData;
   const { error } = await supabase
     .from('projects')
-    .update(formData)
+    .update({
+      ...rest,
+      deadline: end_date
+    })
     .eq('id', id);
 
   if (error) {
