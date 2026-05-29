@@ -16,6 +16,7 @@ import { DashboardTabs } from '@/components/dashboard/dashboard-tabs'
 import { ProjectForm } from '@/components/dashboard/projects/project-form'
 import { UserForm } from '@/components/dashboard/users/user-form'
 import { redirect } from 'next/navigation'
+import { getAuthUser } from '@/lib/auth'
 
 export default async function DashboardPage({
   searchParams
@@ -24,55 +25,54 @@ export default async function DashboardPage({
 }) {
   const currentTab = (await searchParams).tab || 'overview'
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const { user, profile } = await getAuthUser()
 
   if (!user) return null
 
-  // Fetch Profile to get Role
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
   const isAdmin = profile?.role === 'admin'
 
-  // 1. Fetch Real Stats
-  const { count: projectsCount } = await supabase
-    .from('projects')
-    .select('*', { count: 'exact', head: true })
+  // Fetch all stats and recent data in parallel
+  const [
+    projectsCountRes,
+    tasksCountRes,
+    invoicesCountRes,
+    membersCountRes,
+    recentProjectsRes,
+    recentTasksRes
+  ] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('id', { count: 'exact', head: true }),
+    supabase
+      .from('tasks')
+      .select('id', { count: 'exact', head: true })
+      .neq('status', 'Terminé'),
+    supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true }),
+    supabase
+      .from('profiles')
+      .select('id', { count: 'exact', head: true }),
+    supabase
+      .from('projects')
+      .select('id, name, location, end_date, status, created_at')
+      .order('created_at', { ascending: false })
+      .limit(3),
+    supabase
+      .from('tasks')
+      .select('id, title, priority, due_date, status, project:projects(name)')
+      .eq('assigned_to', user.id)
+      .neq('status', 'Terminé')
+      .order('due_date', { ascending: true })
+      .limit(4)
+  ])
 
-  const { count: tasksCount } = await supabase
-    .from('tasks')
-    .select('*', { count: 'exact', head: true })
-    .neq('status', 'Terminé')
-
-  const { count: invoicesCount } = await supabase
-    .from('invoices')
-    .select('*', { count: 'exact', head: true })
-
-  const { count: membersCount } = await supabase
-    .from('profiles')
-    .select('*', { count: 'exact', head: true })
-
-  // 2. Fetch Recent Projects
-  const { data: recentProjects } = await supabase
-    .from('projects')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(3)
-
-  // 3. Fetch Recent Tasks
-  const { data: recentTasks } = await supabase
-    .from('tasks')
-    .select(`
-      *,
-      project:projects(name)
-    `)
-    .eq('assigned_to', user.id)
-    .neq('status', 'Terminé')
-    .order('due_date', { ascending: true })
-    .limit(4)
+  const projectsCount = projectsCountRes.count
+  const tasksCount = tasksCountRes.count
+  const invoicesCount = invoicesCountRes.count
+  const membersCount = membersCountRes.count
+  const recentProjects = recentProjectsRes.data
+  const recentTasks = recentTasksRes.data as any[] | null
 
   return (
     <div className="space-y-12 animate-in fade-in duration-700">

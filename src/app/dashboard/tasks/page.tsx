@@ -20,6 +20,8 @@ import { TaskSearch } from '@/components/dashboard/tasks/task-search';
 import { TaskDetailsDialog } from '@/components/dashboard/tasks/task-details-dialog';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+import { getAuthUser } from '@/lib/auth';
+
 export default async function TasksPage({
   searchParams
 }: {
@@ -30,46 +32,48 @@ export default async function TasksPage({
   const searchQuery = params.search || '';
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile } = await getAuthUser();
 
   if (!user) {
     redirect('/auth/login');
   }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
-
   const isAdmin = profile?.role === 'admin';
 
-  // Fetch data for the form
-  const { data: projects } = await supabase.from('projects').select('id, name');
-  const { data: members } = await supabase.from('profiles').select('id, full_name, role');
-
-  // Fetch tasks
-  let query = supabase
+  // Build tasks query base
+  let tasksQuery = supabase
     .from('tasks')
     .select(`
-      *,
+      id,
+      title,
+      description,
+      priority,
+      due_date,
+      status,
+      assigned_to,
       project:projects(name),
       assignee:profiles!tasks_assigned_to_fkey(full_name)
     `)
     .order('due_date', { ascending: true });
 
   if (!isAdmin) {
-    query = query.eq('assigned_to', user.id);
+    tasksQuery = tasksQuery.eq('assigned_to', user.id);
   }
-  // Admin: no extra filter — RLS policy scopes to company automatically
 
   if (searchQuery) {
-    query = query.ilike('title', `%${searchQuery}%`);
+    tasksQuery = tasksQuery.ilike('title', `%${searchQuery}%`);
   }
 
-  const { data: tasks } = await query;
+  // Fetch tasks, projects, and members in parallel
+  const [projectsRes, membersRes, tasksRes] = await Promise.all([
+    supabase.from('projects').select('id, name').order('name'),
+    supabase.from('profiles').select('id, full_name, role').order('full_name'),
+    tasksQuery
+  ]);
+
+  const projects = projectsRes.data;
+  const members = membersRes.data;
+  const tasks = tasksRes.data;
 
   const statuses = ['À faire', 'En cours', 'En révision', 'Terminé'];
   

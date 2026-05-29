@@ -63,6 +63,7 @@ export default async function EstimatorDetailPage({
   );
 
   const rawInputs = sheet.input_data as Record<string, any> | null;
+  const rawInputsMap = rawInputs ? new Map<string, any>(Object.entries(rawInputs)) : null;
 
   return (
     <div className="p-6 lg:p-8 space-y-8 animate-in fade-in duration-500">
@@ -166,7 +167,7 @@ export default async function EstimatorDetailPage({
       )}
 
       {/* ── Calculation Parameters (Collapsible) ── */}
-      {rawInputs && (
+      {rawInputsMap && (
         <details className="group rounded-2xl border border-zinc-800 bg-zinc-900/20 overflow-hidden [&_summary::-webkit-details-marker]:hidden">
           <summary className="flex items-center justify-between px-6 py-4 cursor-pointer hover:bg-zinc-800/30 transition-colors select-none">
             <div className="flex items-center gap-2">
@@ -178,14 +179,15 @@ export default async function EstimatorDetailPage({
           </summary>
           <div className="px-6 pb-6 pt-4 border-t border-zinc-800/40 space-y-6 bg-zinc-950/20 animate-in slide-in-from-top-4 duration-350">
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {ESTIMATOR_CATEGORIES.filter((cat) => rawInputs[cat.id]).map((cat) => {
-                const catInputs = rawInputs[cat.id];
+              {ESTIMATOR_CATEGORIES.filter((cat) => rawInputsMap.has(cat.id)).map((cat) => {
+                const catInputs = rawInputsMap.get(cat.id);
+                const catInputsMap = catInputs ? new Map<string, any>(Object.entries(catInputs)) : null;
                 return (
                   <div key={cat.id} className="space-y-2">
                     <h4 className="text-xs font-black text-brand-cyan uppercase tracking-wider">{cat.name}</h4>
                     <div className="bg-zinc-900/40 rounded-xl border border-zinc-850 p-4 space-y-2.5">
-                      {cat.fields.map((f) => {
-                        const val = catInputs[f.name];
+                      {catInputsMap && cat.fields.map((f) => {
+                        const val = catInputsMap.get(f.name);
                         let displayVal = val;
                         if (f.type === 'select') {
                           displayVal = f.options?.find((opt) => opt.value === val)?.label ?? val;
@@ -205,11 +207,11 @@ export default async function EstimatorDetailPage({
               })}
             </div>
 
-            {rawInputs.concrete_conversion !== undefined && (
+            {rawInputsMap.has('concrete_conversion') && (
               <div className="flex items-center gap-2 text-xs font-bold text-zinc-500 border-t border-zinc-850 pt-4">
                 <span>CONVERSION DES MATÉRIAUX BÉTON :</span>
-                <span className={rawInputs.concrete_conversion ? 'text-emerald-400' : 'text-zinc-600'}>
-                  {rawInputs.concrete_conversion ? 'ACTIVÉE (Dosage 350kg/m³)' : 'DÉSACTIVÉE'}
+                <span className={rawInputsMap.get('concrete_conversion') ? 'text-emerald-400' : 'text-zinc-600'}>
+                  {rawInputsMap.get('concrete_conversion') ? 'ACTIVÉE (Dosage 350kg/m³)' : 'DÉSACTIVÉE'}
                 </span>
               </div>
             )}

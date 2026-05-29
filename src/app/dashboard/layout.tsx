@@ -1,35 +1,13 @@
 import { Sidebar } from '@/components/sidebar/sidebar'
-import { createClient } from '@/lib/supabase/server'
+import { getAuthUser } from '@/lib/auth'
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const supabase = await createClient()
-  const { data: { user }, error: userError } = await supabase.auth.getUser()
-  
-  if (userError) {
-    console.error("DashboardLayout user fetch error:", userError)
-  }
-
-  let userRole = 'worker'
-  if (user) {
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('role')
-      .eq('id', user.id)
-      .single()
-      
-    if (error) {
-      console.error("DashboardLayout profile fetch error:", error)
-    } else {
-      console.log("DashboardLayout fetched profile:", profile)
-      userRole = profile?.role || 'worker'
-    }
-  } else {
-    console.warn("DashboardLayout: No user found in session")
-  }
+  const { profile } = await getAuthUser()
+  const userRole = profile?.role || 'worker'
 
   return (
     <div className="flex min-h-screen bg-slate-950 text-slate-100 selection:bg-brand-blue selection:text-white">

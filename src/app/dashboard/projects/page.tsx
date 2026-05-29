@@ -11,6 +11,8 @@ import { ProjectActions } from '@/components/dashboard/projects/project-actions'
 import { ProjectTabs } from '@/components/dashboard/projects/project-tabs';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
+import { getAuthUser } from '@/lib/auth';
+
 interface ProjectsPageProps {
   searchParams: { tab?: string };
 }
@@ -20,19 +22,11 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
   const currentTab = params.tab || 'list';
   const supabase = await createClient();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user, profile } = await getAuthUser();
 
   if (!user) {
     redirect('/auth/login');
   }
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single();
 
   const isAdmin = profile?.role === 'admin';
 
@@ -42,7 +36,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
 
   const { data: projects } = await supabase
     .from('projects')
-    .select('*')
+    .select('id, name, status, client_name, location, start_date, end_date, created_at')
     .order('created_at', { ascending: false });
 
   const getStatusColor = (status: string) => {

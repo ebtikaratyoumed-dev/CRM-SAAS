@@ -10,27 +10,27 @@ export async function getCompanyFinancials() {
     throw new Error('Non authentifié');
   }
 
-  // Fetch all projects for estimated profitability
-  const { data: projects, error: projectsError } = await supabase
-    .from('projects')
-    .select('id, name, estimated_cost, estimated_profit');
+  // Fetch all data in parallel
+  const [projectsRes, outgoingInvoicesRes, incomingInvoicesRes] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('id, name, estimated_cost, estimated_profit'),
+    supabase
+      .from('invoices_outgoing')
+      .select('id, total, tax_amount, project_id')
+      .eq('status', 'Payée'),
+    supabase
+      .from('invoices')
+      .select('id, total_amount, tax, project_id')
+  ]);
 
-  if (projectsError) throw new Error('Erreur lors de la récupération des projets');
+  if (projectsRes.error) throw new Error('Erreur lors de la récupération des projets');
+  if (outgoingInvoicesRes.error) throw new Error('Erreur lors de la récupération des factures clients');
+  if (incomingInvoicesRes.error) throw new Error('Erreur lors de la récupération des factures fournisseurs');
 
-  // Fetch all outgoing invoices (client payments / revenue)
-  const { data: outgoingInvoices, error: outgoingError } = await supabase
-    .from('invoices_outgoing')
-    .select('id, total, tax_amount, project_id')
-    .eq('status', 'Payée'); // Only count invoices marked "payé" (status = 'Payée') and not "sent" or draft.
-
-  if (outgoingError) throw new Error('Erreur lors de la récupération des factures clients');
-
-  // Fetch all incoming invoices (supplier payments / spends)
-  const { data: incomingInvoices, error: incomingError } = await supabase
-    .from('invoices')
-    .select('id, total_amount, tax, project_id');
-
-  if (incomingError) throw new Error('Erreur lors de la récupération des factures fournisseurs');
+  const projects = projectsRes.data;
+  const outgoingInvoices = outgoingInvoicesRes.data;
+  const incomingInvoices = incomingInvoicesRes.data;
 
   // Calculate totals
   let totalEstimatedCost = 0;
@@ -65,10 +65,10 @@ export async function getCompanyFinancials() {
   let bestActualProject = null;
   let highestActualProfit = -Infinity;
 
-  const projectActuals: Record<string, { revenue: number; spend: number; name: string; tvaCollected: number; tvaPaid: number }> = {};
+  const projectActuals = new Map<string, { revenue: number; spend: number; name: string; tvaCollected: number; tvaPaid: number }>();
   
   projects.forEach((p) => {
-    projectActuals[p.id] = { revenue: 0, spend: 0, name: p.name, tvaCollected: 0, tvaPaid: 0 };
+    projectActuals.set(p.id, { revenue: 0, spend: 0, name: p.name, tvaCollected: 0, tvaPaid: 0 });
     if (Number(p.estimated_profit || 0) > highestEstimatedProfit) {
       highestEstimatedProfit = Number(p.estimated_profit || 0);
       bestEstimatedProject = p;
@@ -76,26 +76,32 @@ export async function getCompanyFinancials() {
   });
 
   outgoingInvoices.forEach((inv) => {
-    if (inv.project_id && projectActuals[inv.project_id]) {
-      projectActuals[inv.project_id].revenue += Number(inv.total || 0);
-      projectActuals[inv.project_id].tvaCollected += Number(inv.tax_amount || 0);
+    if (inv.project_id) {
+      const actual = projectActuals.get(inv.project_id);
+      if (actual) {
+        actual.revenue += Number(inv.total || 0);
+        actual.tvaCollected += Number(inv.tax_amount || 0);
+      }
     }
   });
 
   incomingInvoices.forEach((inv) => {
-    if (inv.project_id && projectActuals[inv.project_id]) {
-      projectActuals[inv.project_id].spend += Number(inv.total_amount || 0);
-      projectActuals[inv.project_id].tvaPaid += Number(inv.tax || 0);
+    if (inv.project_id) {
+      const actual = projectActuals.get(inv.project_id);
+      if (actual) {
+        actual.spend += Number(inv.total_amount || 0);
+        actual.tvaPaid += Number(inv.tax || 0);
+      }
     }
   });
 
-  Object.entries(projectActuals).forEach(([id, data]) => {
+  for (const [id, data] of projectActuals.entries()) {
     const actualProfit = data.revenue - data.spend;
     if (actualProfit > highestActualProfit) {
       highestActualProfit = actualProfit;
       bestActualProject = { id, name: data.name, actualProfit };
     }
-  });
+  }
 
   return {
     totalEstimatedCost,
@@ -108,39 +114,46 @@ export async function getCompanyFinancials() {
     netTva,
     bestEstimatedProject,
     bestActualProject,
-    projectDetails: projects.map(p => ({
-      ...p,
-      actualRevenue: projectActuals[p.id]?.revenue || 0,
-      actualSpend: projectActuals[p.id]?.spend || 0,
-      actualProfit: (projectActuals[p.id]?.revenue || 0) - (projectActuals[p.id]?.spend || 0),
-      tvaCollected: projectActuals[p.id]?.tvaCollected || 0,
-      tvaPaid: projectActuals[p.id]?.tvaPaid || 0,
-      netTva: (projectActuals[p.id]?.tvaCollected || 0) - (projectActuals[p.id]?.tvaPaid || 0)
-    }))
+    projectDetails: projects.map(p => {
+      const actual = projectActuals.get(p.id);
+      return {
+        ...p,
+        actualRevenue: actual?.revenue || 0,
+        actualSpend: actual?.spend || 0,
+        actualProfit: (actual?.revenue || 0) - (actual?.spend || 0),
+        tvaCollected: actual?.tvaCollected || 0,
+        tvaPaid: actual?.tvaPaid || 0,
+        netTva: (actual?.tvaCollected || 0) - (actual?.tvaPaid || 0)
+      };
+    })
   };
 }
 
 export async function getProjectFinancials(projectId: string) {
   const supabase = await createClient();
 
-  const { data: project, error: pError } = await supabase
-    .from('projects')
-    .select('estimated_cost, estimated_profit')
-    .eq('id', projectId)
-    .single();
+  const [projectRes, outgoingRes, incomingRes] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('estimated_cost, estimated_profit')
+      .eq('id', projectId)
+      .single(),
+    supabase
+      .from('invoices_outgoing')
+      .select('total, tax_amount')
+      .eq('project_id', projectId)
+      .eq('status', 'Payée'),
+    supabase
+      .from('invoices')
+      .select('total_amount, tax')
+      .eq('project_id', projectId)
+  ]);
 
-  if (pError) throw new Error('Erreur lors de la récupération du projet');
+  if (projectRes.error) throw new Error('Erreur lors de la récupération du projet');
 
-  const { data: outgoing } = await supabase
-    .from('invoices_outgoing')
-    .select('total, tax_amount')
-    .eq('project_id', projectId)
-    .eq('status', 'Payée');
-
-  const { data: incoming } = await supabase
-    .from('invoices')
-    .select('total_amount, tax')
-    .eq('project_id', projectId);
+  const project = projectRes.data;
+  const outgoing = outgoingRes.data;
+  const incoming = incomingRes.data;
 
   let actualRevenue = 0;
   let tvaCollected = 0;

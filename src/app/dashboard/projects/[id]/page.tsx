@@ -10,7 +10,6 @@ import {
   Briefcase,
   CircleDollarSign
 } from 'lucide-react';
-import { getProjectFinancials } from '@/app/dashboard/finance/actions';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -22,57 +21,91 @@ import { AddStockDialog } from '@/components/stock/add-stock-dialog';
 import { StockRowActions } from '@/components/stock/stock-row-actions';
 import { Package } from 'lucide-react';
 
+import { getAuthUser } from '@/lib/auth';
+
 // Create a component that fetches everything.
 export default async function ProjectDetailsPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user } = await getAuthUser();
 
   if (!user) {
     redirect('/auth/login');
   }
 
-  const { data: project } = await supabase
-    .from('projects')
-    .select('*')
-    .eq('id', id)
-    .single();
+  // Fetch project, tasks, incoming/outgoing invoices and stock items in parallel
+  const [
+    projectRes,
+    tasksRes,
+    incomingInvoicesRes,
+    outgoingInvoicesRes,
+    stockItemsRes
+  ] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('*')
+      .eq('id', id)
+      .single(),
+    supabase
+      .from('tasks')
+      .select('*, assignee:profiles!tasks_assigned_to_fkey(full_name)')
+      .eq('project_id', id)
+      .order('due_date', { ascending: true }),
+    supabase
+      .from('invoices')
+      .select('*')
+      .eq('project_id', id)
+      .order('invoice_date', { ascending: false }),
+    supabase
+      .from('invoices_outgoing')
+      .select('*')
+      .eq('project_id', id)
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('stock_items')
+      .select('*, invoice:invoices(invoice_number, vendor_name)')
+      .eq('project_id', id)
+      .order('created_at', { ascending: false })
+  ]);
 
+  const project = projectRes.data;
   if (!project) {
     redirect('/dashboard/projects');
   }
 
-  // Fetch Tasks
-  const { data: tasks } = await supabase
-    .from('tasks')
-    .select('*, assignee:profiles!tasks_assigned_to_fkey(full_name)')
-    .eq('project_id', id)
-    .order('due_date', { ascending: true });
+  const tasks = tasksRes.data;
+  const incomingInvoices = incomingInvoicesRes.data;
+  const outgoingInvoices = outgoingInvoicesRes.data;
+  const stockItems = stockItemsRes.data;
 
-  // Fetch Incoming Invoices
-  const { data: incomingInvoices } = await supabase
-    .from('invoices')
-    .select('*')
-    .eq('project_id', id)
-    .order('invoice_date', { ascending: false });
+  // Calculate Financials in-memory from fetched data to avoid redundant DB hits
+  let actualRevenue = 0;
+  let tvaCollected = 0;
+  outgoingInvoices?.forEach((inv: any) => {
+    if (inv.status === 'Payée') {
+      actualRevenue += Number(inv.total || 0);
+      tvaCollected += Number(inv.tax_amount || 0);
+    }
+  });
 
-  // Fetch Outgoing Invoices
-  const { data: outgoingInvoices } = await supabase
-    .from('invoices_outgoing')
-    .select('*')
-    .eq('project_id', id)
-    .order('created_at', { ascending: false });
+  let actualSpend = 0;
+  let tvaPaid = 0;
+  incomingInvoices?.forEach((inv: any) => {
+    actualSpend += Number(inv.total_amount || 0);
+    tvaPaid += Number(inv.tax || 0);
+  });
 
-  // Fetch Stock Items
-  const { data: stockItems } = await supabase
-    .from('stock_items')
-    .select('*, invoice:invoices(invoice_number, vendor_name)')
-    .eq('project_id', id)
-    .order('created_at', { ascending: false });
-
-  // Fetch Financials
-  const financials = await getProjectFinancials(id);
+  const financials = {
+    estimatedCost: Number(project.estimated_cost || 0),
+    estimatedProfit: Number(project.estimated_profit || 0),
+    actualRevenue,
+    actualSpend,
+    actualProfit: actualRevenue - actualSpend,
+    tvaCollected,
+    tvaPaid,
+    netTva: tvaCollected - tvaPaid,
+  };
 
   const getStatusColor = (status: string) => {
     switch (status?.toLowerCase()) {

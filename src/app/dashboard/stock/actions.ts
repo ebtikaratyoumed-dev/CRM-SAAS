@@ -55,6 +55,7 @@ export async function addStockItem(formData: {
   quantity: number;
   unit: string;
   invoice_id?: string | null;
+  alert_threshold?: number | null;
 }) {
   const supabase = await createClient();
 
@@ -143,6 +144,7 @@ export async function updateStockItem(
     quantity: number;
     unit: string;
     invoice_id?: string | null;
+    alert_threshold?: number | null;
   }
 ) {
   const supabase = await createClient();

@@ -3,40 +3,6 @@
 import { createClient } from '@/lib/supabase/server';
 import { revalidatePath } from 'next/cache';
 
-export async function saveScannedInvoice(formData: {
-  project_id: string | null;
-  vendor_name: string;
-  invoice_number: string;
-  invoice_date: string;
-  total_amount: number;
-  tax: number;
-  line_items: any;
-  file_url: string;
-}) {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    throw new Error('Non authentifié');
-  }
-
-  const { data, error } = await supabase.from('invoices').insert({
-    ...formData,
-    uploaded_by: user.id,
-    status: 'Validée',
-  }).select();
-
-  if (error) {
-    console.error('Erreur lors de la sauvegarde de la facture:', error);
-    throw new Error('Impossible de sauvegarder la facture');
-  }
-
-  revalidatePath('/dashboard/invoices');
-  return { success: true, data };
-}
 
 export async function createManualIncomingInvoice(formData: {
   project_id: string | null;

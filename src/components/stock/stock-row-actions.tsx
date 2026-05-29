@@ -28,6 +28,7 @@ interface StockRowActionsProps {
     unit: string;
     project_id: string;
     invoice_id: string | null;
+    alert_threshold: number | null;
   };
   projectId?: string;
   incomingInvoices?: { id: string; invoice_number: string; vendor_name: string; project_id?: string | null }[];
@@ -47,6 +48,7 @@ export function StockRowActions({ item, projectId, incomingInvoices = [], projec
     quantity: String(item.quantity),
     unit: item.unit,
     invoice_id: item.invoice_id || 'none',
+    alert_threshold: item.alert_threshold != null ? String(item.alert_threshold) : '',
   });
 
   const handleEditSubmit = async (e: React.FormEvent) => {
@@ -65,6 +67,7 @@ export function StockRowActions({ item, projectId, incomingInvoices = [], projec
         quantity: Number(formData.quantity),
         unit: formData.unit,
         invoice_id: formData.invoice_id !== 'none' ? formData.invoice_id : null,
+        alert_threshold: formData.alert_threshold ? Number(formData.alert_threshold) : null,
       });
 
       toast.success("Article mis à jour avec succès");
@@ -209,6 +212,20 @@ export function StockRowActions({ item, projectId, incomingInvoices = [], projec
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="edit-alert-threshold">Seuil d'alerte (Optionnel)</Label>
+              <Input
+                id="edit-alert-threshold"
+                type="number"
+                min="0"
+                className="bg-slate-950 border-slate-800"
+                placeholder="ex: 10"
+                value={formData.alert_threshold}
+                onChange={(e) => setFormData({ ...formData, alert_threshold: e.target.value })}
+              />
+              <p className="text-[11px] text-slate-500">Vous serez alerté quand la quantité atteint ce seuil.</p>
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

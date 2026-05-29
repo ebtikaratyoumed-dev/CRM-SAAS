@@ -25,35 +25,50 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import Link from 'next/link';
 
+import { getAuthUser } from '@/lib/auth';
+
 export default async function InvoicesPage() {
   const supabase = await createClient();
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const { user } = await getAuthUser();
 
   if (!user) {
     redirect('/auth/login');
   }
 
-  // 1. Fetch Incoming Invoices (Fournisseurs)
-  const { data: incomingInvoices } = await supabase
-    .from('invoices')
-    .select(`
-      *,
-      project:projects(name),
-      stock_items(id)
-    `)
-    .order('invoice_date', { ascending: false });
+  // Fetch incoming and outgoing invoices in parallel, selecting only required fields
+  const [incomingRes, outgoingRes] = await Promise.all([
+    supabase
+      .from('invoices')
+      .select(`
+        id,
+        invoice_number,
+        vendor_name,
+        project_id,
+        invoice_date,
+        total_amount,
+        status,
+        file_url,
+        project:projects(name),
+        stock_items(id)
+      `)
+      .order('invoice_date', { ascending: false }),
+    supabase
+      .from('invoices_outgoing')
+      .select(`
+        id,
+        invoice_number,
+        client_name,
+        project_id,
+        created_at,
+        total,
+        status,
+        project:projects(name)
+      `)
+      .order('created_at', { ascending: false })
+  ]);
 
-  // 2. Fetch Outgoing Invoices (Clients)
-  const { data: outgoingInvoices } = await supabase
-    .from('invoices_outgoing')
-    .select(`
-      *,
-      project:projects(name)
-    `)
-    .order('created_at', { ascending: false });
+  const incomingInvoices = incomingRes.data;
+  const outgoingInvoices = outgoingRes.data;
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND' }).format(amount);
@@ -122,7 +137,7 @@ export default async function InvoicesPage() {
                   <TableRow key={invoice.id} className="border-slate-800 hover:bg-slate-900/40 transition-colors">
                     <TableCell className="font-medium text-slate-200">{invoice.invoice_number}</TableCell>
                     <TableCell className="text-slate-300 font-semibold">{invoice.vendor_name}</TableCell>
-                    <TableCell className="text-slate-400 text-xs">{invoice.project?.name || 'Non assigné'}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">{(invoice.project as any)?.name || 'Non assigné'}</TableCell>
                     <TableCell className="text-slate-400">
                       {invoice.invoice_date ? format(new Date(invoice.invoice_date), 'dd MMM yyyy', { locale: fr }) : '-'}
                     </TableCell>
@@ -189,7 +204,7 @@ export default async function InvoicesPage() {
                   <TableRow key={invoice.id} className="border-slate-800 hover:bg-slate-900/40 transition-colors">
                     <TableCell className="font-medium text-slate-200">{invoice.invoice_number}</TableCell>
                     <TableCell className="text-slate-300 font-semibold">{invoice.client_name}</TableCell>
-                    <TableCell className="text-slate-400 text-xs">{invoice.project?.name}</TableCell>
+                    <TableCell className="text-slate-400 text-xs">{(invoice.project as any)?.name}</TableCell>
                     <TableCell className="text-slate-400">
                       {format(new Date(invoice.created_at), 'dd MMM yyyy', { locale: fr })}
                     </TableCell>

@@ -6,32 +6,35 @@ import { fr } from 'date-fns/locale';
 import { AddStockDialog } from '@/components/stock/add-stock-dialog';
 import { StockRowActions } from '@/components/stock/stock-row-actions';
 
+import { getAuthUser } from '@/lib/auth';
+
 export default async function StockPage() {
   const supabase = await createClient();
-
-  const { data: { user } } = await supabase.auth.getUser();
+  const { user } = await getAuthUser();
 
   if (!user) {
     redirect('/auth/login');
   }
 
-  // Fetch all stock items with related project and invoice info
-  const { data: stockItems } = await supabase
-    .from('stock_items')
-    .select('*, project:projects(id, name), invoice:invoices(invoice_number, vendor_name)')
-    .order('created_at', { ascending: false });
+  // Fetch all stock page dependencies in parallel selecting specific columns
+  const [stockRes, projectsRes, invoicesRes] = await Promise.all([
+    supabase
+      .from('stock_items')
+      .select('id, name, description, quantity, unit, created_at, project_id, invoice_id, project:projects(id, name), invoice:invoices(invoice_number, vendor_name)')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('projects')
+      .select('id, name')
+      .order('name'),
+    supabase
+      .from('invoices')
+      .select('id, invoice_number, vendor_name, project_id')
+      .order('created_at', { ascending: false })
+  ]);
 
-  // Fetch projects for the dialog dropdown
-  const { data: projects } = await supabase
-    .from('projects')
-    .select('id, name')
-    .order('name');
-
-  // Fetch incoming invoices for the dialog dropdown
-  const { data: incomingInvoices } = await supabase
-    .from('invoices')
-    .select('id, invoice_number, vendor_name, project_id')
-    .order('created_at', { ascending: false });
+  const stockItems = stockRes.data;
+  const projects = projectsRes.data;
+  const incomingInvoices = invoicesRes.data;
 
   return (
     <div className="p-8 space-y-8 animate-in fade-in duration-500">
