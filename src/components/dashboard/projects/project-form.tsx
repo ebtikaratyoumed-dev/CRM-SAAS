@@ -35,7 +35,7 @@ const projectSchema = z.object({
   client_name: z.string().min(2, "Le nom du client est trop court"),
   location: z.string().min(2, "L'emplacement est trop court"),
   start_date: z.date({ error: "La date de début est requise" }),
-  deadline: z.date({ error: "La date d'échéance est requise" }),
+  end_date: z.date({ error: "La date d'échéance est requise" }),
   status: z.enum(['Planification', 'En cours', 'En pause', 'Terminé']),
   estimated_cost: z.coerce.number().min(0, "Le coût ne peut être négatif"),
   estimated_profit: z.coerce.number().min(0, "Le profit ne peut être négatif"),
@@ -60,7 +60,7 @@ export function ProjectForm({ initialData, onSuccess }: ProjectFormProps) {
       ? {
           ...initialData,
           start_date: new Date(initialData.start_date),
-          deadline: new Date(initialData.deadline),
+          end_date: new Date(initialData.end_date),
         }
       : {
           name: '',
@@ -78,7 +78,7 @@ export function ProjectForm({ initialData, onSuccess }: ProjectFormProps) {
       const payload = {
         ...values,
         start_date: format(values.start_date, 'yyyy-MM-dd'),
-        deadline: format(values.deadline, 'yyyy-MM-dd'),
+        end_date: format(values.end_date, 'yyyy-MM-dd'),
       };
 
       if (initialData) {
@@ -188,7 +188,7 @@ export function ProjectForm({ initialData, onSuccess }: ProjectFormProps) {
           />
           <FormField
             control={form.control}
-            name="deadline"
+            name="end_date"
             render={({ field }) => (
               <FormItem className="flex flex-col">
                 <FormLabel>Échéance</FormLabel>

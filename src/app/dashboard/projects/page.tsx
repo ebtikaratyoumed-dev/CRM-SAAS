@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { getAuthUser } from '@/lib/auth';
 
 interface ProjectsPageProps {
-  searchParams: { tab?: string };
+  searchParams: Promise<{ tab?: string }>;
 }
 
 export default async function ProjectsPage({ searchParams }: ProjectsPageProps) {
@@ -34,10 +34,16 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
     redirect('/dashboard');
   }
 
-  const { data: projects } = await supabase
+  const { data: projects, error: projectsError } = await supabase
     .from('projects')
     .select('id, name, status, client_name, location, start_date, end_date, created_at')
     .order('created_at', { ascending: false });
+
+  if (projectsError) {
+    console.error('Error fetching projects:', projectsError);
+  }
+
+  const projectList = projects || [];
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -78,7 +84,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projects?.map((project) => (
+            {projectList.map((project) => (
               <div key={project.id} className="group relative bg-slate-900/40 border border-slate-800 rounded-2xl p-6 transition-all hover:bg-slate-900/60 hover:border-slate-700 hover:shadow-2xl hover:shadow-blue-500/5">
                 <div className="flex justify-between items-start mb-4">
                   <Badge variant="outline" className={getStatusColor(project.status)}>
@@ -124,7 +130,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
               </div>
             ))}
 
-            {projects?.length === 0 && (
+            {projectList.length === 0 && (
               <div className="col-span-full py-20 text-center bg-slate-900/20 border border-dashed border-slate-800 rounded-3xl">
                 <p className="text-slate-500">Aucun projet trouvé.</p>
               </div>

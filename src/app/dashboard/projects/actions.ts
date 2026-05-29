@@ -8,7 +8,7 @@ export async function createProject(formData: {
   client_name: string;
   location: string;
   start_date: string;
-  deadline: string;
+  end_date: string;
   status: 'Planification' | 'En cours' | 'En pause' | 'Terminé';
   estimated_cost: number;
   estimated_profit: number;
@@ -54,7 +54,7 @@ export async function updateProject(
     client_name: string;
     location: string;
     start_date: string;
-    deadline: string;
+    end_date: string;
     status: 'Planification' | 'En cours' | 'En pause' | 'Terminé';
     estimated_cost: number;
     estimated_profit: number;

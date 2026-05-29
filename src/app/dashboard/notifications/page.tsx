@@ -165,22 +165,22 @@ export default function NotificationsPage() {
       {/* Filter Tabs */}
       <Tabs value={filter} onValueChange={setFilter} className="w-full">
         <TabsList className="bg-slate-900/50 border border-slate-800 p-1">
-          <TabsTrigger value="all" className="data-[state=active]:bg-slate-800 gap-2">
+          <TabsTrigger value="all" className="data-active:bg-slate-800 gap-2">
             <Bell className="h-3.5 w-3.5" />
             Toutes
             <span className="text-[10px] text-slate-500 font-mono">({notifications.length})</span>
           </TabsTrigger>
-          <TabsTrigger value="unread" className="data-[state=active]:bg-slate-800 gap-2">
+          <TabsTrigger value="unread" className="data-active:bg-slate-800 gap-2">
             <Info className="h-3.5 w-3.5 text-blue-400" />
             Non lues
             <span className="text-[10px] text-slate-500 font-mono">({unreadCount})</span>
           </TabsTrigger>
-          <TabsTrigger value="task" className="data-[state=active]:bg-slate-800 gap-2">
+          <TabsTrigger value="task" className="data-active:bg-slate-800 gap-2">
             <ClipboardList className="h-3.5 w-3.5 text-cyan-400" />
             Tâches
             <span className="text-[10px] text-slate-500 font-mono">({taskCount})</span>
           </TabsTrigger>
-          <TabsTrigger value="stock" className="data-[state=active]:bg-slate-800 gap-2">
+          <TabsTrigger value="stock" className="data-active:bg-slate-800 gap-2">
             <Package className="h-3.5 w-3.5 text-amber-400" />
             Stock
             <span className="text-[10px] text-slate-500 font-mono">({stockCount})</span>

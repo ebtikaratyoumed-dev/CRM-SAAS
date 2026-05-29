@@ -100,11 +100,11 @@ export default async function InvoicesPage() {
 
       <Tabs defaultValue="incoming" className="w-full">
         <TabsList className="bg-slate-900/50 border border-slate-800 p-1 mb-6">
-          <TabsTrigger value="incoming" className="data-[state=active]:bg-slate-800 flex gap-2">
+          <TabsTrigger value="incoming" className="data-active:bg-slate-800 flex gap-2">
             <ArrowDownLeft className="h-4 w-4 text-emerald-500" />
             Factures Fournisseurs
           </TabsTrigger>
-          <TabsTrigger value="outgoing" className="data-[state=active]:bg-slate-800 flex gap-2">
+          <TabsTrigger value="outgoing" className="data-active:bg-slate-800 flex gap-2">
             <ArrowUpRight className="h-4 w-4 text-blue-500" />
             Factures Clients
           </TabsTrigger>

@@ -152,23 +152,23 @@ export default async function ProjectDetailsPage({ params }: { params: Promise<{
 
       <Tabs defaultValue="details" className="w-full">
         <TabsList className="bg-slate-900/50 border border-slate-800 p-1 mb-6">
-          <TabsTrigger value="details" className="data-[state=active]:bg-slate-800 flex gap-2">
+          <TabsTrigger value="details" className="data-active:bg-slate-800 flex gap-2">
             <FileText className="h-4 w-4 text-blue-500" />
             Détails
           </TabsTrigger>
-          <TabsTrigger value="tasks" className="data-[state=active]:bg-slate-800 flex gap-2">
+          <TabsTrigger value="tasks" className="data-active:bg-slate-800 flex gap-2">
             <CheckCircle2 className="h-4 w-4 text-emerald-500" />
             Tâches ({tasks?.length || 0})
           </TabsTrigger>
-          <TabsTrigger value="invoices" className="data-[state=active]:bg-slate-800 flex gap-2">
+          <TabsTrigger value="invoices" className="data-active:bg-slate-800 flex gap-2">
             <Briefcase className="h-4 w-4 text-purple-500" />
             Factures
           </TabsTrigger>
-          <TabsTrigger value="stock" className="data-[state=active]:bg-slate-800 flex gap-2">
+          <TabsTrigger value="stock" className="data-active:bg-slate-800 flex gap-2">
             <Package className="h-4 w-4 text-orange-500" />
             Stock
           </TabsTrigger>
-          <TabsTrigger value="finance" className="data-[state=active]:bg-slate-800 flex gap-2">
+          <TabsTrigger value="finance" className="data-active:bg-slate-800 flex gap-2">
             <CircleDollarSign className="h-4 w-4 text-amber-500" />
             Finance
           </TabsTrigger>

@@ -104,10 +104,10 @@ export default async function TasksPage({
         <Tabs defaultValue="tous" className="w-full">
         <div className="flex items-center justify-between mb-6 gap-4">
             <TabsList className="bg-slate-900/50 border border-slate-800 p-1">
-                <TabsTrigger value="tous" className="data-[state=active]:bg-slate-800">Toutes</TabsTrigger>
-                <TabsTrigger value="À faire" className="data-[state=active]:bg-slate-800">À faire</TabsTrigger>
-                <TabsTrigger value="En cours" className="data-[state=active]:bg-slate-800">En cours</TabsTrigger>
-                <TabsTrigger value="Terminé" className="data-[state=active]:bg-slate-800">Terminées</TabsTrigger>
+                <TabsTrigger value="tous" className="data-active:bg-slate-800">Toutes</TabsTrigger>
+                <TabsTrigger value="À faire" className="data-active:bg-slate-800">À faire</TabsTrigger>
+                <TabsTrigger value="En cours" className="data-active:bg-slate-800">En cours</TabsTrigger>
+                <TabsTrigger value="Terminé" className="data-active:bg-slate-800">Terminées</TabsTrigger>
             </TabsList>
 
             <TaskSearch />
