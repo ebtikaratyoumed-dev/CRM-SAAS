@@ -73,7 +73,7 @@ export default async function TasksPage({
 
   const projects = projectsRes.data;
   const members = membersRes.data;
-  const tasks = tasksRes.data;
+  const tasks = tasksRes.data as any[] | null;
 
   const statuses = ['À faire', 'En cours', 'En révision', 'Terminé'];
   
