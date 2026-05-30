@@ -24,6 +24,7 @@ import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { toast } from 'sonner'
+import { NotificationBell } from './notification-bell'
 
 const navItems = [
   { label: 'Tableau de bord', href: '/dashboard', icon: LayoutDashboard },
@@ -87,17 +88,18 @@ export function Sidebar({ userRole = 'worker' }: { userRole?: string }) {
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
         {/* Branding */}
-        <div className="p-6 flex justify-center">
+        <div className="p-6 flex items-center justify-between">
           <Link href="/dashboard" onClick={() => setIsOpen(false)}>
             <Image 
               src="/corex.png" 
               alt="Corex Logo" 
-              width={160} 
-              height={160} 
+              width={120} 
+              height={120} 
               className="object-contain hover:scale-105 transition-transform cursor-pointer"
               priority
             />
           </Link>
+          <NotificationBell />
         </div>
 
         <Separator className="bg-zinc-800 mx-6 w-auto" />

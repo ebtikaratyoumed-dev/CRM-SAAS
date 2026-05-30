@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Bell, CheckCircle2, AlertTriangle, Info, Package, ClipboardList } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,13 +44,16 @@ export function NotificationBell() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [open, setOpen] = useState(false);
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   useEffect(() => {
+    let channel: any;
+    let active = true;
+
     async function fetchNotifications() {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !active) return;
 
       const { data } = await supabase
         .from('notifications')
@@ -59,13 +62,15 @@ export function NotificationBell() {
         .order('created_at', { ascending: false })
         .limit(10);
 
-      if (data) {
+      if (data && active) {
         setNotifications(data);
         setUnreadCount(data.filter(n => !n.read).length);
       }
 
+      if (!active) return;
+
       // Realtime subscription
-      const channel = supabase
+      channel = supabase
         .channel('schema-db-changes')
         .on(
           'postgres_changes',
@@ -76,6 +81,7 @@ export function NotificationBell() {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
+            if (!active) return;
             setNotifications(prev => [payload.new, ...prev].slice(0, 15));
             setUnreadCount(c => c + 1);
             toast.info(payload.new.title, {
@@ -84,13 +90,16 @@ export function NotificationBell() {
           }
         )
         .subscribe();
-
-      return () => {
-        supabase.removeChannel(channel);
-      };
     }
 
     fetchNotifications();
+
+    return () => {
+      active = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
+    };
   }, [supabase]);
 
   const markAllAsRead = async () => {

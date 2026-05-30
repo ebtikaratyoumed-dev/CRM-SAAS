@@ -5,8 +5,19 @@
 -- ============================================================
 
 -- ============================================================
--- 1. Enhance notifications table
+-- 1. Create and Enhance notifications table
 -- ============================================================
+CREATE TABLE IF NOT EXISTS notifications (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    title TEXT NOT NULL,
+    message TEXT NOT NULL,
+    read BOOLEAN DEFAULT false NOT NULL,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+ALTER TABLE notifications ENABLE ROW LEVEL SECURITY;
+
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'info';
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS link TEXT;
 ALTER TABLE notifications ADD COLUMN IF NOT EXISTS entity_type TEXT;
@@ -172,3 +183,9 @@ CREATE TRIGGER on_stock_low_alert
   AFTER UPDATE ON stock_items
   FOR EACH ROW
   EXECUTE FUNCTION notify_stock_low();
+
+-- ============================================================
+-- 7. Add to Realtime Publication
+-- ============================================================
+ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
+

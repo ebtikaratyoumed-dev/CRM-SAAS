@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Bell, CheckCircle2, AlertTriangle, Info, Package, ClipboardList, CheckCheck, Inbox } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -40,7 +40,7 @@ export default function NotificationsPage() {
   const [notifications, setNotifications] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<string>('all');
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
 
   const fetchNotifications = useCallback(async () => {
@@ -61,13 +61,15 @@ export default function NotificationsPage() {
   }, [supabase]);
 
   useEffect(() => {
+    let channel: any;
+    let active = true;
+
     fetchNotifications();
 
     // Realtime subscription
-    let channel: any;
     (async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user || !active) return;
 
       channel = supabase
         .channel('notifications-page')
@@ -80,6 +82,7 @@ export default function NotificationsPage() {
             filter: `user_id=eq.${user.id}`,
           },
           (payload) => {
+            if (!active) return;
             setNotifications(prev => [payload.new, ...prev]);
           }
         )
@@ -87,7 +90,10 @@ export default function NotificationsPage() {
     })();
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      active = false;
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, [supabase, fetchNotifications]);
 
