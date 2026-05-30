@@ -42,7 +42,8 @@ export default async function DashboardPage({
   ] = await Promise.all([
     supabase
       .from('projects')
-      .select('id', { count: 'exact', head: true }),
+      .select('id', { count: 'exact', head: true })
+      .neq('status', 'Terminé'),
     supabase
       .from('tasks')
       .select('id', { count: 'exact', head: true })

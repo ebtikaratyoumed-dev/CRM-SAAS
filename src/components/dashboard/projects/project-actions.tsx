@@ -18,6 +18,8 @@ import { useState } from "react";
 import { ProjectForm } from "./project-form";
 import { deleteProject } from "@/app/dashboard/projects/actions";
 import { toast } from "sonner";
+import { useRouter } from "next/navigation";
+import { useDashboardCache } from "@/context/dashboard-cache";
 
 interface ProjectActionsProps {
   project: any;
@@ -26,6 +28,8 @@ interface ProjectActionsProps {
 export function ProjectActions({ project }: ProjectActionsProps) {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const router = useRouter();
+  const { refreshData } = useDashboardCache();
 
   const handleDelete = async () => {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce projet ?')) {
@@ -33,6 +37,8 @@ export function ProjectActions({ project }: ProjectActionsProps) {
       try {
         await deleteProject(project.id);
         toast.success('Projet supprimé avec succès');
+        await refreshData();
+        router.refresh();
       } catch (error: any) {
         toast.error(error.message || 'Erreur lors de la suppression');
       } finally {

@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/dialog';
 import { deleteIncomingInvoice } from '@/app/dashboard/invoices/actions';
 import { toast } from 'sonner';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
 interface IncomingInvoiceActionsProps {
   invoiceId: string;
@@ -36,6 +37,7 @@ export function IncomingInvoiceActions({ invoiceId }: IncomingInvoiceActionsProp
   const router = useRouter();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const { refreshData } = useDashboardCache();
 
   const handleDelete = async () => {
     setIsDeleting(true);
@@ -43,6 +45,7 @@ export function IncomingInvoiceActions({ invoiceId }: IncomingInvoiceActionsProp
       await deleteIncomingInvoice(invoiceId);
       toast.success('Facture supprimée avec succès');
       setIsDeleteDialogOpen(false);
+      await refreshData();
       router.refresh();
     } catch (error: any) {
       toast.error(error.message || 'Erreur lors de la suppression');

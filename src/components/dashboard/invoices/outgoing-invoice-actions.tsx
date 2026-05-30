@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { updateOutgoingInvoiceStatus, deleteOutgoingInvoice } from '@/app/dashboard/invoices-outgoing/actions'
 import { toast } from 'sonner'
+import { useDashboardCache } from '@/context/dashboard-cache'
 
 interface Props {
   invoice: {
@@ -26,12 +27,14 @@ interface Props {
 export function OutgoingInvoiceActions({ invoice }: Props) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const { refreshData } = useDashboardCache()
 
   const handleStatus = (status: string) => {
     startTransition(async () => {
       try {
         await updateOutgoingInvoiceStatus(invoice.id, status)
         toast.success(`Statut mis à jour : ${status}`)
+        await refreshData()
         router.refresh()
       } catch {
         toast.error('Impossible de mettre à jour le statut')
@@ -45,6 +48,7 @@ export function OutgoingInvoiceActions({ invoice }: Props) {
       try {
         await deleteOutgoingInvoice(invoice.id)
         toast.success('Facture supprimée')
+        await refreshData()
         router.refresh()
       } catch {
         toast.error('Impossible de supprimer la facture')

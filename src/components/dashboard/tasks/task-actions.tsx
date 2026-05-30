@@ -14,6 +14,7 @@ import { toast } from "sonner";
 import { useState } from "react";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
+import { useDashboardCache } from "@/context/dashboard-cache";
 
 interface TaskActionsProps {
   task: any;
@@ -23,12 +24,14 @@ interface TaskActionsProps {
 export function TaskActions({ task, isAdmin }: TaskActionsProps) {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
+  const { refreshData } = useDashboardCache();
 
   const handleStatusUpdate = async (newStatus: string) => {
     setLoading(true);
     try {
       await updateTaskStatus(task.id, newStatus);
       toast.success(`Statut mis à jour: ${newStatus}`);
+      await refreshData();
       router.refresh();
     } catch (error: any) {
       toast.error(error.message);
@@ -43,6 +46,7 @@ export function TaskActions({ task, isAdmin }: TaskActionsProps) {
       try {
         await deleteTask(task.id);
         toast.success('Tâche supprimée');
+        await refreshData();
         router.refresh();
       } catch (error: any) {
         toast.error(error.message);

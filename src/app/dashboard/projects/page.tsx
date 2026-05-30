@@ -1,6 +1,7 @@
 'use client';
 
-import { useSearchParams, redirect } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { useSearchParams, redirect, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { LayoutGrid, Search, MapPin, Calendar, User } from 'lucide-react';
 import { ProjectForm } from '@/components/dashboard/projects/project-form';
@@ -16,9 +17,33 @@ import { useDashboardCache } from '@/context/dashboard-cache';
 export default function ProjectsPage() {
   const searchParams = useSearchParams();
   const currentTab = searchParams.get('tab') || 'list';
-  const { projects, profile, loading } = useDashboardCache();
+  const searchQuery = searchParams.get('search') || '';
+  const router = useRouter();
+  
+  const { projects, profile, fetchProjects } = useDashboardCache();
+  const [searchValue, setSearchValue] = useState(searchQuery);
 
-  if (loading) {
+  useEffect(() => {
+    fetchProjects();
+  }, [fetchProjects]);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      const params = new URLSearchParams(searchParams.toString());
+      if (searchValue) {
+        params.set('search', searchValue);
+      } else {
+        params.delete('search');
+      }
+      router.push(`?${params.toString()}`);
+    }, 300);
+
+    return () => clearTimeout(handler);
+  }, [searchValue, searchParams, router]);
+
+  const loadingData = !projects || !profile;
+
+  if (loadingData) {
     return (
       <div className="p-8 text-center text-slate-400">
         <LayoutGrid className="h-8 w-8 animate-bounce mx-auto mb-4 text-blue-500" />
@@ -38,12 +63,18 @@ export default function ProjectsPage() {
     end_date: p.deadline
   }));
 
+  const filteredProjects = projectList.filter((project: any) =>
+    project.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    project.client_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    project.location?.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'Planification': return 'bg-blue-500/10 text-blue-500 border-blue-500/20';
       case 'En cours': return 'bg-cyan-500/10 text-cyan-500 border-cyan-500/20';
       case 'En pause': return 'bg-amber-500/10 text-amber-500 border-amber-500/20';
-      case 'Termine': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
+      case 'Terminé': return 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20';
       default: return 'bg-slate-500/10 text-slate-500 border-slate-500/20';
     }
   };
@@ -66,18 +97,20 @@ export default function ProjectsPage() {
       {currentTab === 'list' ? (
         <div className="space-y-8">
           <div className="flex items-center gap-4 bg-slate-900/50 p-2 rounded-xl border border-slate-800">
-            <div className="relative flex-1">
+            <div className="relative flex-1 max-w-sm">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
               <input 
                 type="text" 
                 placeholder="Rechercher un projet..." 
-                className="w-full bg-slate-950 border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all border"
+                value={searchValue}
+                onChange={(e) => setSearchValue(e.target.value)}
+                className="w-full bg-slate-950 border-slate-800 rounded-lg pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/50 transition-all border text-white"
               />
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {projectList.map((project) => (
+            {filteredProjects.map((project) => (
               <div key={project.id} className="group relative bg-slate-900/40 border border-slate-800 rounded-2xl p-6 transition-all hover:bg-slate-900/60 hover:border-slate-700 hover:shadow-2xl hover:shadow-blue-500/5">
                 <div className="flex justify-between items-start mb-4">
                   <Badge variant="outline" className={getStatusColor(project.status)}>
@@ -123,11 +156,11 @@ export default function ProjectsPage() {
               </div>
             ))}
 
-            {projectList.length === 0 && (
+            {filteredProjects.length === 0 && (
               <div className="col-span-full text-center py-12 bg-slate-900/20 border border-slate-800 border-dashed rounded-2xl">
                 <LayoutGrid className="mx-auto h-12 w-12 text-slate-600 mb-4" />
                 <h3 className="text-lg font-semibold text-slate-300">Aucun projet</h3>
-                <p className="text-slate-500 mt-1">Vous n'avez pas encore cree de projet.</p>
+                <p className="text-slate-500 mt-1">Aucun projet ne correspond à votre recherche.</p>
               </div>
             )}
           </div>

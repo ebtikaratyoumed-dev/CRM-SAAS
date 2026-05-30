@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useSearchParams, redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Shield, Clock } from 'lucide-react';
@@ -23,9 +24,15 @@ import { useDashboardCache } from '@/context/dashboard-cache';
 export default function UsersPage() {
   const searchParams = useSearchParams();
   const currentTab = searchParams.get('tab') || 'list';
-  const { users: members, user, profile, loading } = useDashboardCache();
+  const { users: members, user, profile, fetchUsers } = useDashboardCache();
 
-  if (loading) {
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
+
+  const loadingData = !members || !profile;
+
+  if (loadingData) {
     return (
       <div className="p-8 text-center text-slate-400">
         <Clock className="h-8 w-8 animate-bounce mx-auto mb-4 text-purple-500" />

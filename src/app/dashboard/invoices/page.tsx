@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { 
   Plus, 
   ArrowUpRight, 
@@ -27,13 +28,20 @@ import Link from 'next/link';
 import { useDashboardCache } from '@/context/dashboard-cache';
 
 export default function InvoicesPage() {
-  const { incomingInvoices, outgoingInvoices, loading } = useDashboardCache();
+  const { incomingInvoices, outgoingInvoices, fetchIncomingInvoices, fetchOutgoingInvoices } = useDashboardCache();
+
+  useEffect(() => {
+    fetchIncomingInvoices();
+    fetchOutgoingInvoices();
+  }, [fetchIncomingInvoices, fetchOutgoingInvoices]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('fr-TN', { style: 'currency', currency: 'TND' }).format(amount);
   };
 
-  if (loading) {
+  const loadingData = !incomingInvoices || !outgoingInvoices;
+
+  if (loadingData) {
     return (
       <div className="p-8 text-center text-slate-400">
         <Clock className="h-8 w-8 animate-bounce mx-auto mb-4 text-emerald-500" />

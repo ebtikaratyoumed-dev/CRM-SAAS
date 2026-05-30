@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { Package } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -8,9 +9,17 @@ import { StockRowActions } from '@/components/stock/stock-row-actions';
 import { useDashboardCache } from '@/context/dashboard-cache';
 
 export default function StockPage() {
-  const { stockItems, projects, incomingInvoices, loading } = useDashboardCache();
+  const { stockItems, projects, incomingInvoices, fetchStockItems, fetchProjects, fetchIncomingInvoices } = useDashboardCache();
 
-  if (loading) {
+  useEffect(() => {
+    fetchStockItems();
+    fetchProjects();
+    fetchIncomingInvoices();
+  }, [fetchStockItems, fetchProjects, fetchIncomingInvoices]);
+
+  const loadingData = !stockItems || !projects || !incomingInvoices;
+
+  if (loadingData) {
     return (
       <div className="p-8 text-center text-slate-400">
         <Package className="h-8 w-8 animate-bounce mx-auto mb-4 text-orange-500" />

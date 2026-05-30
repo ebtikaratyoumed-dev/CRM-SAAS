@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useSearchParams, redirect } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Plus, Search, Calendar, User, CheckCircle2, Clock, Play, AlertTriangle, MoreVertical } from 'lucide-react';
@@ -29,9 +30,17 @@ export default function TasksPage() {
   const currentTab = searchParams.get('tab') || 'list';
   const searchQuery = searchParams.get('search') || '';
 
-  const { tasks, projects, users, profile, loading } = useDashboardCache();
+  const { tasks, projects, users, profile, fetchTasks, fetchProjects, fetchUsers } = useDashboardCache();
 
-  if (loading) {
+  useEffect(() => {
+    fetchTasks();
+    fetchProjects();
+    fetchUsers();
+  }, [fetchTasks, fetchProjects, fetchUsers]);
+
+  const loadingData = !tasks || !projects || !users || !profile;
+
+  if (loadingData) {
     return (
       <div className="p-8 text-center text-slate-400">
         <Clock className="h-8 w-8 animate-bounce mx-auto mb-4 text-emerald-500" />
@@ -126,7 +135,7 @@ export default function TasksPage() {
                        <div className="flex items-center gap-2">
                           <div className={cn(
                             "h-2 w-2 rounded-full animate-pulse",
-                            task.status === 'Termine' ? 'bg-emerald-500' : 
+                            task.status === 'Terminé' ? 'bg-emerald-500' : 
                             task.status === 'En cours' ? 'bg-cyan-500' : 'bg-slate-600'
                           )} />
                           <span className="text-[10px] font-bold uppercase tracking-wider text-slate-300">{task.status || 'A faire'}</span>

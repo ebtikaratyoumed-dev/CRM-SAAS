@@ -14,11 +14,13 @@ import {
 } from '@/components/ui/dialog';
 import { UserForm } from '@/components/dashboard/users/user-form';
 import { useRouter } from 'next/navigation';
+import { useDashboardCache } from '@/context/dashboard-cache';
 
 export function UserActions({ user, currentUserId }: { user: any; currentUserId: string }) {
   const [loading, setLoading] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const router = useRouter();
+  const { refreshData } = useDashboardCache();
 
   async function handleDelete() {
     if (user.id === currentUserId) {
@@ -33,6 +35,7 @@ export function UserActions({ user, currentUserId }: { user: any; currentUserId:
       const response = await deleteUser(user.id);
       if (response.success) {
         toast.success(`Utilisateur supprimé avec succès.`);
+        await refreshData();
         router.refresh();
       }
     } catch (error: any) {
