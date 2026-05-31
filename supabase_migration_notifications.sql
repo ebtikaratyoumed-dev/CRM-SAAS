@@ -189,3 +189,18 @@ CREATE TRIGGER on_stock_low_alert
 -- ============================================================
 ALTER PUBLICATION supabase_realtime ADD TABLE notifications;
 
+-- ============================================================
+-- 8. Scheduled Cleanup: Delete notifications older than 30 days
+-- ============================================================
+-- Enable pg_cron extension
+CREATE EXTENSION IF NOT EXISTS pg_cron;
+
+-- Schedule the cleanup to run daily at 2:00 AM UTC
+-- pg_cron uses cron.schedule(job_name, schedule, command) which is idempotent
+SELECT cron.schedule(
+  'purge-old-notifications',
+  '0 2 * * *',
+  $$ DELETE FROM public.notifications WHERE created_at < NOW() - INTERVAL '30 days' $$
+);
+
+

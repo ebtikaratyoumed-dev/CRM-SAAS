@@ -86,6 +86,7 @@ export function NotificationBell() {
             setUnreadCount(c => c + 1);
             toast.info(payload.new.title, {
               description: payload.new.message,
+              duration: 5000, // 5 seconds
             });
           }
         )

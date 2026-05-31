@@ -61,14 +61,14 @@ export function AddStockDialog({ projectId, incomingInvoices = [], projects = []
         alert_threshold: formData.alert_threshold ? Number(formData.alert_threshold) : null,
       });
 
-      toast.success("Article ajouté au stock avec succès");
+      toast.success("Article ajouté au stock avec succès", { duration: 2000 });
       setOpen(false);
       setFormData({ project_id: projectId || '', name: '', description: '', quantity: '', unit: '', invoice_id: 'none', alert_threshold: '' });
       await refreshData();
       router.refresh();
     } catch (error: any) {
       console.error('Failed to add stock item:', error);
-      toast.error(error.message || "Erreur lors de l'ajout au stock");
+      toast.error(error.message || "Erreur lors de l'ajout au stock", { duration: 2000 });
     } finally {
       setLoading(false);
     }

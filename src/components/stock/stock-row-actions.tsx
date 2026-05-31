@@ -72,13 +72,13 @@ export function StockRowActions({ item, projectId, incomingInvoices = [], projec
         alert_threshold: formData.alert_threshold ? Number(formData.alert_threshold) : null,
       });
 
-      toast.success("Article mis à jour avec succès");
+      toast.success("Article mis à jour avec succès", { duration: 2000 });
       setEditOpen(false);
       await refreshData();
       router.refresh();
     } catch (error: any) {
       console.error('Failed to update stock item:', error);
-      toast.error(error.message || "Erreur lors de la mise à jour");
+      toast.error(error.message || "Erreur lors de la mise à jour", { duration: 2000 });
     } finally {
       setLoading(false);
     }
@@ -88,13 +88,13 @@ export function StockRowActions({ item, projectId, incomingInvoices = [], projec
     setLoading(true);
     try {
       await deleteStockItem(item.id);
-      toast.success("Article supprimé du stock avec succès");
+      toast.success("Article supprimé du stock avec succès", { duration: 2000 });
       setDeleteOpen(false);
       await refreshData();
       router.refresh();
     } catch (error: any) {
       console.error('Failed to delete stock item:', error);
-      toast.error(error.message || "Erreur lors de la suppression");
+      toast.error(error.message || "Erreur lors de la suppression", { duration: 2000 });
     } finally {
       setLoading(false);
     }
